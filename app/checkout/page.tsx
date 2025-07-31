@@ -1,7 +1,7 @@
 'use client';
 
 import { useState, useEffect } from 'react';
-import { useCart, CartItem } from '@/context/CartContext'; // Am importat și tipul CartItem
+import { useCart, CartItem } from '@/context/CartContext';
 import { loadStripe, StripeElementsOptions } from '@stripe/stripe-js';
 import { Elements, PaymentElement, useStripe, useElements } from '@stripe/react-stripe-js';
 import { collection, addDoc } from 'firebase/firestore';
@@ -11,8 +11,10 @@ import { useRouter } from 'next/navigation';
 // Încarcă cheia publică Stripe. Asigură-te că o adaugi în .env.local!
 const stripePromise = loadStripe(process.env.NEXT_PUBLIC_STRIPE_PUBLISHABLE_KEY!);
 
-// Componenta principală a formularului de checkout
-const CheckoutForm = () => {
+// ####################################################################
+// ## MODIFICARE 1: Componenta primește acum `clientSecret` prin props ##
+// ####################################################################
+const CheckoutForm = ({ clientSecret }: { clientSecret: string }) => {
   const stripe = useStripe();
   const elements = useElements();
   const router = useRouter();
@@ -34,30 +36,27 @@ const CheckoutForm = () => {
 
   const handleSubmit = async (event: React.FormEvent) => {
     event.preventDefault();
-    if (!stripe || !elements) return;
+    if (!stripe || !elements || !clientSecret) {
+      return;
+    }
 
     setIsLoading(true);
 
-    // Confirmă plata cu Stripe
+    // Confirmă datele formularului de plată
     const { error: submitError } = await elements.submit();
     if (submitError) {
-      setErrorMessage(submitError.message || 'A apărut o eroare.');
+      setErrorMessage(submitError.message || 'A apărut o eroare la trimiterea datelor.');
       setIsLoading(false);
       return;
     }
 
-    // Obține clientSecret de la API-ul nostru
-    const res = await fetch('/api/create-payment-intent', {
-      method: 'POST',
-      headers: { 'Content-Type': 'application/json' },
-      body: JSON.stringify({ cartItems }),
-    });
-
-    const { clientSecret } = await res.json();
-
+    // #################################################################################
+    // ## MODIFICARE 2: Am șters blocul care crea un al doilea Payment Intent        ##
+    // ## Acum folosim `clientSecret`-ul primit prin props pentru a confirma plata.  ##
+    // #################################################################################
     const { error } = await stripe.confirmPayment({
       elements,
-      clientSecret,
+      clientSecret, // Se folosește `clientSecret`-ul corect, primit ca prop
       confirmParams: {
         return_url: `${window.location.origin}/order-confirmation`,
       },
@@ -72,7 +71,6 @@ const CheckoutForm = () => {
         await addDoc(collection(db, 'orders'), {
           shippingInfo,
           cartItems,
-          // CORECȚIE: Am adăugat tipuri explicite pentru a ajuta TypeScript
           total: cartItems.reduce((sum: number, item: CartItem) => sum + item.price * item.quantity, 0),
           createdAt: new Date(),
           status: 'pending',
@@ -92,7 +90,6 @@ const CheckoutForm = () => {
       <div>
         <h2 className="text-lg font-medium text-gray-900">Informații de Livrare</h2>
         <div className="mt-4 grid grid-cols-1 gap-y-6 sm:grid-cols-2 sm:gap-x-4">
-          {/* Câmpuri pentru nume, email, adresă, etc. */}
           <input name="name" type="text" required placeholder="Nume complet" onChange={handleInputChange} className="w-full px-3 py-2 border border-gray-300 rounded-md text-gray-900"/>
           <input name="email" type="email" required placeholder="Adresă de email" onChange={handleInputChange} className="w-full px-3 py-2 border border-gray-300 rounded-md text-gray-900"/>
           <input name="address" type="text" required placeholder="Adresă" onChange={handleInputChange} className="sm:col-span-2 w-full px-3 py-2 border border-gray-300 rounded-md text-gray-900"/>
@@ -150,7 +147,10 @@ const CheckoutPage = () => {
         <h1 className="text-3xl font-extrabold text-gray-900 mb-8">Finalizează comanda</h1>
         {clientSecret && (
           <Elements options={options} stripe={stripePromise}>
-            <CheckoutForm />
+            {/* #################################################################### */}
+            {/* ## MODIFICARE 3: Pasăm `clientSecret` către componenta formularului ## */}
+            {/* #################################################################### */}
+            <CheckoutForm clientSecret={clientSecret} />
           </Elements>
         )}
       </div>
