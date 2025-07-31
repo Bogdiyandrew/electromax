@@ -32,13 +32,14 @@ async function getProduct(id: string): Promise<Product | null> {
   };
 }
 
-// SOLUȚIA: Definește o interfață explicită pentru props
-interface PageProps {
+// SOLUȚIA NOUĂ: Definește tipul pentru întregul obiect 'props'
+type PageProps = {
   params: { id: string };
-}
+};
 
-// Folosește interfața PageProps pentru a tipa proprietățile
-export default async function Page({ params }: PageProps) {
+// Primește întregul obiect 'props' și extrage 'params' în interior
+export default async function Page(props: PageProps) {
+  const { params } = props;
   const product = await getProduct(params.id);
 
   if (!product) notFound();
