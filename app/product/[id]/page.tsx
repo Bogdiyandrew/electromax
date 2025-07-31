@@ -1,9 +1,14 @@
-// app/product/[id]/page.tsx
-
 import { doc, getDoc } from 'firebase/firestore';
 import { db } from '@/firebase/config';
 import { notFound } from 'next/navigation';
 import ProductClientPage from './ProductClientPage';
+
+// Definim tipul pentru props-urile paginii, inclusiv params
+type ProductDetailPageProps = {
+  params: {
+    id: string;
+  };
+};
 
 // Definim o interfață pentru structura unui produs
 interface Product {
@@ -13,7 +18,7 @@ interface Product {
   description: string;
   category: string;
   stock: number;
-  imageUrl?: string; // Am adăugat imageUrl ca opțional
+  imageUrl?: string;
 }
 
 // Funcție pentru a citi datele unui singur produs de pe server
@@ -24,8 +29,6 @@ async function getProduct(id: string): Promise<Product | null> {
   if (docSnap.exists()) {
     const data = docSnap.data();
     
-    // Construim manual obiectul pentru a ne asigura
-    // că este "plain" și conține doar date simple.
     const product: Product = {
       id: docSnap.id,
       name: data.name,
@@ -33,7 +36,7 @@ async function getProduct(id: string): Promise<Product | null> {
       description: data.description,
       category: data.category,
       stock: data.stock,
-      imageUrl: data.imageUrl || undefined, // Adăugăm imageUrl dacă există
+      imageUrl: data.imageUrl || undefined,
     };
     
     return product;
@@ -43,7 +46,7 @@ async function getProduct(id: string): Promise<Product | null> {
 }
 
 // Pagina principală (Server Component) care doar preia datele
-export default async function ProductDetailPage({ params }: { params: { id: string } }) {
+export default async function ProductDetailPage({ params }: ProductDetailPageProps) {
   const product = await getProduct(params.id);
 
   if (!product) {
