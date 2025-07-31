@@ -33,11 +33,8 @@ async function getProduct(id: string): Promise<Product | null> {
 }
 
 // 👇 SCRIE TIPUL INLINE AICI — fără PageProps extern
-export default async function Page({
-  params,
-}: {
-  params: { id: string };
-}) {
+// eslint-disable-next-line @typescript-eslint/no-explicit-any
+export default async function ProductPage({ params }: any) {
   const product = await getProduct(params.id);
 
   if (!product) notFound();
