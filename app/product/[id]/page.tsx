@@ -32,8 +32,13 @@ async function getProduct(id: string): Promise<Product | null> {
   };
 }
 
-// 👇 ASTA e cheia — fără niciun import extern pentru PageProps
-export default async function Page({ params }: { params: { id: string } }) {
+// SOLUȚIA: Definește o interfață explicită pentru props
+interface PageProps {
+  params: { id: string };
+}
+
+// Folosește interfața PageProps pentru a tipa proprietățile
+export default async function Page({ params }: PageProps) {
   const product = await getProduct(params.id);
 
   if (!product) notFound();
