@@ -1,0 +1,97 @@
+'use client';
+
+import Link from 'next/link';
+import { useCart } from '@/context/CartContext';
+import { Trash2, Plus, Minus } from 'lucide-react';
+import { useState, useEffect } from 'react';
+
+const CartPage = () => {
+  const { cartItems, removeFromCart, updateItemQuantity, clearCart } = useCart();
+  const [isClient, setIsClient] = useState(false);
+
+  // Acest efect rulează doar în browser, după ce pagina s-a încărcat
+  useEffect(() => {
+    setIsClient(true);
+  }, []);
+
+  const subtotal = cartItems.reduce((sum, item) => sum + item.price * item.quantity, 0);
+
+  return (
+    <div className="bg-gray-100 py-12">
+      <div className="max-w-4xl mx-auto px-4 sm:px-6 lg:px-8">
+        <h1 className="text-3xl font-extrabold text-gray-900 mb-8">Coșul tău de cumpărături</h1>
+
+        {/* Afișăm conținutul doar după ce ne asigurăm că suntem în browser */}
+        {!isClient ? (
+          <div className="text-center bg-white p-8 rounded-lg shadow-md">
+            <p className="text-gray-600 text-lg">Se încarcă coșul...</p>
+          </div>
+        ) : cartItems.length === 0 ? (
+          <div className="text-center bg-white p-8 rounded-lg shadow-md">
+            <p className="text-gray-600 text-lg">Coșul tău este gol.</p>
+            <Link href="/" className="mt-4 inline-block px-6 py-3 font-medium text-white bg-indigo-600 rounded-md hover:bg-indigo-700">
+              Continuă cumpărăturile
+            </Link>
+          </div>
+        ) : (
+          <div className="bg-white p-8 rounded-lg shadow-md">
+            <ul className="divide-y divide-gray-200">
+              {cartItems.map(item => (
+                <li key={item.id} className="flex py-6 items-center">
+                  <div className="h-24 w-24 flex-shrink-0 overflow-hidden rounded-md border border-gray-200 bg-gray-100"></div>
+                  <div className="ml-4 flex flex-1 flex-col">
+                    <div>
+                      <div className="flex justify-between text-base font-medium text-gray-900">
+                        <h3>{item.name}</h3>
+                        <p className="ml-4">{(item.price * item.quantity).toFixed(2)} RON</p>
+                      </div>
+                    </div>
+                    <div className="flex flex-1 items-end justify-between text-sm mt-4">
+                      <div className="flex items-center border border-gray-300 rounded-md">
+                        <button onClick={() => updateItemQuantity(item.id, item.quantity - 1)} className="px-2 py-1 text-gray-600 hover:bg-gray-100 rounded-l-md" disabled={item.quantity <= 1}>
+                          <Minus size={16} />
+                        </button>
+                        <span className="px-4 py-1 text-gray-900 font-semibold">{item.quantity}</span>
+                        <button onClick={() => updateItemQuantity(item.id, item.quantity + 1)} className="px-2 py-1 text-gray-600 hover:bg-gray-100 rounded-r-md">
+                          <Plus size={16} />
+                        </button>
+                      </div>
+                      <div className="flex">
+                        <button onClick={() => removeFromCart(item.id)} type="button" className="font-medium text-red-600 hover:text-red-500 flex items-center gap-1">
+                          <Trash2 size={16} />
+                          <span>Șterge</span>
+                        </button>
+                      </div>
+                    </div>
+                  </div>
+                </li>
+              ))}
+            </ul>
+            <div className="border-t border-gray-200 pt-6 mt-6">
+              <div className="flex justify-between text-lg font-medium text-gray-900">
+                <p>Subtotal</p>
+                <p>{subtotal.toFixed(2)} RON</p>
+              </div>
+              <p className="mt-1 text-sm text-gray-500">Taxele de livrare vor fi calculate la checkout.</p>
+              <div className="mt-6">
+                <Link href="/checkout" className="flex items-center justify-center rounded-md border border-transparent bg-indigo-600 px-6 py-3 text-base font-medium text-white shadow-sm hover:bg-indigo-700">
+                  Finalizează comanda
+                </Link>
+              </div>
+              <div className="mt-6 flex justify-center text-center text-sm text-gray-500">
+                <p>
+                  sau{' '}
+                  <button onClick={clearCart} type="button" className="font-medium text-red-600 hover:text-red-500">
+                    Golește coșul
+                  </button>
+                </p>
+              </div>
+            </div>
+          </div>
+        )}
+      </div>
+    </div>
+  );
+};
+
+export default CartPage;
