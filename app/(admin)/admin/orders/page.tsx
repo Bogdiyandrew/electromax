@@ -13,7 +13,7 @@ interface Order {
     email: string;
   };
   total: number;
-  createdAt: Timestamp; // Folosim tipul Timestamp din Firebase
+  createdAt: Timestamp;
   status: string;
 }
 
@@ -25,7 +25,6 @@ const AdminOrdersPage = () => {
   useEffect(() => {
     const fetchOrders = async () => {
       try {
-        // Creăm o interogare pentru a sorta comenzile de la cea mai nouă la cea mai veche
         const ordersQuery = query(collection(db, "orders"), orderBy("createdAt", "desc"));
         const querySnapshot = await getDocs(ordersQuery);
         
@@ -45,6 +44,21 @@ const AdminOrdersPage = () => {
 
     fetchOrders();
   }, []);
+
+  // Funcție pentru a formata data corect
+  const formatDate = (timestamp: Timestamp) => {
+    if (!timestamp) return 'Dată invalidă';
+    // Convertim Timestamp-ul Firebase în obiect Date din JavaScript
+    const date = timestamp.toDate();
+    // Formatăm data pentru a fi lizibilă în format românesc
+    return date.toLocaleString('ro-RO', {
+      year: 'numeric',
+      month: 'long',
+      day: 'numeric',
+      hour: '2-digit',
+      minute: '2-digit',
+    });
+  };
 
   return (
     <div className="min-h-screen bg-gray-100 p-4 sm:p-6 lg:p-8">
@@ -83,7 +97,8 @@ const AdminOrdersPage = () => {
                         <div className="text-sm text-gray-500">{order.shippingInfo.email}</div>
                       </td>
                       <td className="px-6 py-4 whitespace-nowrap text-sm text-gray-500">
-                        {new Date(order.createdAt.seconds * 1000).toLocaleDateString('ro-RO')}
+                        {/* Am folosit noua funcție de formatare */}
+                        {formatDate(order.createdAt)}
                       </td>
                       <td className="px-6 py-4 whitespace-nowrap text-sm font-medium text-gray-900">
                         {order.total.toFixed(2)} RON
@@ -94,7 +109,10 @@ const AdminOrdersPage = () => {
                         </span>
                       </td>
                       <td className="px-6 py-4 whitespace-nowrap text-right text-sm font-medium">
-                        <a href="#" className="text-indigo-600 hover:text-indigo-900">Detalii</a>
+                        {/* Am transformat link-ul într-un Link Next.js funcțional */}
+                        <Link href={`/admin/orders/${order.id}`} className="text-indigo-600 hover:text-indigo-900">
+                          Detalii
+                        </Link>
                       </td>
                     </tr>
                   ))}
