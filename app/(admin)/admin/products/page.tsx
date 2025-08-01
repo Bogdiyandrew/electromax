@@ -3,8 +3,9 @@
 import { useEffect, useState } from 'react';
 import Link from 'next/link';
 import Image from 'next/image';
-import { collection, getDocs, orderBy, query } from 'firebase/firestore';
-import { db } from '@/firebase/config';
+import { collection, getDocs, orderBy, query, doc, deleteDoc } from 'firebase/firestore';
+import { ref, deleteObject } from 'firebase/storage';
+import { db, storage } from '@/firebase/config';
 
 // Definim o interfață pentru structura unui produs
 interface Product {
@@ -21,28 +22,60 @@ const AdminProductsPage = () => {
   const [isLoading, setIsLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
 
-  useEffect(() => {
-    const fetchProducts = async () => {
-      try {
-        const productsQuery = query(collection(db, "products"), orderBy("createdAt", "desc"));
-        const querySnapshot = await getDocs(productsQuery);
-        
-        const fetchedProducts = querySnapshot.docs.map(doc => ({
-          id: doc.id,
-          ...doc.data(),
-        })) as Product[];
-        
-        setProducts(fetchedProducts);
-      } catch (err) {
-        console.error("Eroare la preluarea produselor: ", err);
-        setError("Nu s-au putut încărca produsele. Vă rugăm să încercați din nou.");
-      } finally {
-        setIsLoading(false);
-      }
-    };
+  const fetchProducts = async () => {
+    setIsLoading(true);
+    try {
+      const productsQuery = query(collection(db, "products"), orderBy("createdAt", "desc"));
+      const querySnapshot = await getDocs(productsQuery);
+      
+      const fetchedProducts = querySnapshot.docs.map(doc => ({
+        id: doc.id,
+        ...doc.data(),
+      })) as Product[];
+      
+      setProducts(fetchedProducts);
+    } catch (err) {
+      console.error("Eroare la preluarea produselor: ", err);
+      setError("Nu s-au putut încărca produsele.");
+    } finally {
+      setIsLoading(false);
+    }
+  };
 
+  useEffect(() => {
     fetchProducts();
   }, []);
+
+  // #################################################################
+  // ## FUNCȚIE NOUĂ: Logica pentru ștergerea unui produs           ##
+  // #################################################################
+  const handleDelete = async (productId: string, imageUrl?: string) => {
+    // Adăugăm o confirmare pentru a preveni ștergerile accidentale
+    if (!window.confirm("Ești sigur că vrei să ștergi acest produs? Acțiunea este ireversibilă.")) {
+      return;
+    }
+
+    try {
+      // 1. Șterge imaginea din Firebase Storage, dacă există
+      if (imageUrl) {
+        const imageRef = ref(storage, imageUrl);
+        await deleteObject(imageRef);
+      }
+      
+      // 2. Șterge documentul produsului din Firestore
+      await deleteDoc(doc(db, "products", productId));
+
+      // 3. Actualizează starea locală pentru a reflecta ștergerea în UI
+      setProducts(prevProducts => prevProducts.filter(p => p.id !== productId));
+      
+      alert("Produsul a fost șters cu succes!");
+
+    } catch (err) {
+      console.error("Eroare la ștergerea produsului: ", err);
+      alert("A apărut o eroare la ștergerea produsului.");
+    }
+  };
+
 
   return (
     <div className="min-h-screen bg-gray-100 p-4 sm:p-6 lg:p-8">
@@ -100,8 +133,18 @@ const AdminProductsPage = () => {
                         {product.stock} buc.
                       </td>
                       <td className="px-6 py-4 whitespace-nowrap text-right text-sm font-medium">
-                        <a href="#" className="text-indigo-600 hover:text-indigo-900 mr-4">Editează</a>
-                        <a href="#" className="text-red-600 hover:text-red-900">Șterge</a>
+                        {/* ################################################# */}
+                        {/* ## Am actualizat link-urile de acțiune aici    ## */}
+                        {/* ################################################# */}
+                        <Link href={`/admin/products/edit/${product.id}`} className="text-indigo-600 hover:text-indigo-900 mr-4">
+                            Editează
+                        </Link>
+                        <button 
+                          onClick={() => handleDelete(product.id, product.imageUrl)} 
+                          className="text-red-600 hover:text-red-900"
+                        >
+                          Șterge
+                        </button>
                       </td>
                     </tr>
                   ))}
