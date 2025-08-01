@@ -3,10 +3,8 @@ import { Resend } from 'resend';
 import { doc, getDoc } from 'firebase/firestore';
 import { db } from '@/firebase/config';
 
-// Inițializează Resend cu cheia API din variabilele de mediu
 const resend = new Resend(process.env.RESEND_API_KEY);
 
-// MODIFICARE: Am definit un tip pentru produsele din coș
 interface CartItem {
   name: string;
   quantity: number;
@@ -31,7 +29,6 @@ export async function POST(req: Request) {
     const orderData = orderSnap.data();
     const { shippingInfo, cartItems, total } = orderData;
     
-    // MODIFICARE: Am folosit tipul CartItem în loc de 'any'
     const productsHtml = cartItems.map((item: CartItem) => `
       <tr>
         <td>${item.name} (x${item.quantity})</td>
@@ -39,37 +36,34 @@ export async function POST(req: Request) {
       </tr>
     `).join('');
 
-    // MODIFICARE: Am eliminat 'data' care nu era folosit
+    // #################################################################
+    // ## MODIFICARE: Verificăm dacă cheia API există înainte de a trimite ##
+    // #################################################################
+    if (!process.env.RESEND_API_KEY) {
+        console.error("Cheia API RESEND lipsește din variabilele de mediu!");
+        return new NextResponse("Configurare server incorectă.", { status: 500 });
+    }
+
     const { error } = await resend.emails.send({
-      from: 'ElectroMax <suport@electro-max.ro>',
+      // Pentru a testa, poți schimba temporar 'from' în: 'onboarding@resend.dev'
+      from: 'ElectroMax <suport@electro-max.ro>', 
       to: [shippingInfo.email],
       subject: `Confirmare Comandă #${orderId.substring(0, 6)}`,
-      html: `
-        <h1>Mulțumim pentru comanda ta, ${shippingInfo.name}!</h1>
-        <p>Am primit comanda ta și o vom procesa în cel mai scurt timp.</p>
-        <h3>Detalii Comandă:</h3>
-        <table width="100%">
-          ${productsHtml}
-          <tr><td colspan="2"><hr/></td></tr>
-          <tr style="font-weight: bold;">
-            <td>Total</td>
-            <td style="text-align: right;">${total.toFixed(2)} RON</td>
-          </tr>
-        </table>
-        <p>Vei primi un alt email când comanda ta va fi expediată.</p>
-        <p>Cu respect,<br/>Echipa ElectroMax</p>
-      `,
+      html: `<h1>Detalii comandă...</h1>` // Simplificat pentru test
     });
-
+    
+    // #################################################################
+    // ## MODIFICARE: Logare detaliată a erorii de la Resend          ##
+    // #################################################################
     if (error) {
-      console.error("Eroare Resend:", error);
-      return new NextResponse("Eroare la trimiterea email-ului", { status: 500 });
+      console.error("Eroare primită de la Resend:", JSON.stringify(error, null, 2));
+      return NextResponse.json({ message: "Eroare la trimiterea email-ului", errorDetails: error }, { status: 500 });
     }
 
     return NextResponse.json({ message: "Email trimis cu succes!" });
 
   } catch (error) {
-    console.error("Eroare internă:", error);
+    console.error("Eroare internă în API route:", error);
     const err = error as Error;
     return new NextResponse(err.message, { status: 500 });
   }
