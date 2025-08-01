@@ -1,161 +1,149 @@
 'use client';
 
-import { useState, useEffect } from 'react';
-import { useCart, CartItem } from '@/context/CartContext';
-import { loadStripe, StripeElementsOptions } from '@stripe/stripe-js';
-import { Elements, PaymentElement, useStripe, useElements } from '@stripe/react-stripe-js';
-import { collection, addDoc } from 'firebase/firestore';
+import { useEffect, useState } from 'react';
+import Link from 'next/link';
+import { doc, getDoc, Timestamp } from 'firebase/firestore';
 import { db } from '@/firebase/config';
-import { useRouter } from 'next/navigation';
 
-// Încarcă cheia publică Stripe. Asigură-te că o adaugi în .env.local!
-const stripePromise = loadStripe(process.env.NEXT_PUBLIC_STRIPE_PUBLISHABLE_KEY!);
+// Definim interfețele pentru o structură clară a datelor
+interface CartItem {
+  id: string;
+  name: string;
+  price: number;
+  quantity: number;
+}
 
-// ####################################################################
-// ## MODIFICARE 1: Componenta primește acum `clientSecret` prin props ##
-// ####################################################################
-const CheckoutForm = ({ clientSecret }: { clientSecret: string }) => {
-  const stripe = useStripe();
-  const elements = useElements();
-  const router = useRouter();
-  const { cartItems, clearCart } = useCart();
-  const [errorMessage, setErrorMessage] = useState<string | null>(null);
-  const [isLoading, setIsLoading] = useState(false);
-  const [shippingInfo, setShippingInfo] = useState({
-    name: '',
-    email: '',
-    address: '',
-    city: '',
-    postalCode: '',
-  });
+interface ShippingInfo {
+  name: string;
+  email: string;
+  address: string;
+  city: string;
+  postalCode: string;
+}
 
-  const handleInputChange = (e: React.ChangeEvent<HTMLInputElement>) => {
-    const { name, value } = e.target;
-    setShippingInfo(prev => ({ ...prev, [name]: value }));
-  };
+interface OrderDetails {
+  id: string;
+  cartItems: CartItem[];
+  shippingInfo: ShippingInfo;
+  total: number;
+  createdAt: Timestamp;
+  status: string;
+}
 
-  const handleSubmit = async (event: React.FormEvent) => {
-    event.preventDefault();
-    if (!stripe || !elements || !clientSecret) {
-      return;
-    }
+// #######################################################################
+// ## MODIFICARE AICI: Am aplicat workaround-ul pentru eroarea PageProps ##
+// #######################################################################
+// eslint-disable-next-line @typescript-eslint/no-explicit-any
+export default function OrderDetailPage({ params }: any) {
+  const [order, setOrder] = useState<OrderDetails | null>(null);
+  const [isLoading, setIsLoading] = useState(true);
+  const [error, setError] = useState<string | null>(null);
 
-    setIsLoading(true);
-
-    // Confirmă datele formularului de plată
-    const { error: submitError } = await elements.submit();
-    if (submitError) {
-      setErrorMessage(submitError.message || 'A apărut o eroare la trimiterea datelor.');
-      setIsLoading(false);
-      return;
-    }
-
-    // #################################################################################
-    // ## MODIFICARE 2: Am șters blocul care crea un al doilea Payment Intent        ##
-    // ## Acum folosim `clientSecret`-ul primit prin props pentru a confirma plata.  ##
-    // #################################################################################
-    const { error } = await stripe.confirmPayment({
-      elements,
-      clientSecret, // Se folosește `clientSecret`-ul corect, primit ca prop
-      confirmParams: {
-        return_url: `${window.location.origin}/order-confirmation`,
-      },
-      redirect: 'if_required', // Important: nu redirecționăm automat
-    });
-
-    if (error) {
-      setErrorMessage(error.message || 'Plata a eșuat.');
-    } else {
-      // Plata a reușit! Salvăm comanda în Firestore.
-      try {
-        await addDoc(collection(db, 'orders'), {
-          shippingInfo,
-          cartItems,
-          total: cartItems.reduce((sum: number, item: CartItem) => sum + item.price * item.quantity, 0),
-          createdAt: new Date(),
-          status: 'pending',
-        });
-        clearCart();
-        router.push('/order-confirmation'); // Redirecționăm la pagina de succes
-      } catch (dbError) {
-        setErrorMessage('Plata a reușit, dar a apărut o eroare la salvarea comenzii.');
-      }
-    }
-
-    setIsLoading(false);
-  };
-
-  return (
-    <form onSubmit={handleSubmit} className="space-y-8">
-      <div>
-        <h2 className="text-lg font-medium text-gray-900">Informații de Livrare</h2>
-        <div className="mt-4 grid grid-cols-1 gap-y-6 sm:grid-cols-2 sm:gap-x-4">
-          <input name="name" type="text" required placeholder="Nume complet" onChange={handleInputChange} className="w-full px-3 py-2 border border-gray-300 rounded-md text-gray-900"/>
-          <input name="email" type="email" required placeholder="Adresă de email" onChange={handleInputChange} className="w-full px-3 py-2 border border-gray-300 rounded-md text-gray-900"/>
-          <input name="address" type="text" required placeholder="Adresă" onChange={handleInputChange} className="sm:col-span-2 w-full px-3 py-2 border border-gray-300 rounded-md text-gray-900"/>
-          <input name="city" type="text" required placeholder="Oraș" onChange={handleInputChange} className="w-full px-3 py-2 border border-gray-300 rounded-md text-gray-900"/>
-          <input name="postalCode" type="text" required placeholder="Cod Poștal" onChange={handleInputChange} className="w-full px-3 py-2 border border-gray-300 rounded-md text-gray-900"/>
-        </div>
-      </div>
-      
-      <div>
-        <h2 className="text-lg font-medium text-gray-900">Detalii Plată</h2>
-        <div className="mt-4">
-          <PaymentElement />
-        </div>
-      </div>
-
-      {errorMessage && <div className="text-red-600">{errorMessage}</div>}
-
-      <button
-        type="submit"
-        disabled={isLoading || !stripe}
-        className="w-full bg-indigo-600 text-white py-3 px-4 rounded-md hover:bg-indigo-700 disabled:bg-indigo-400"
-      >
-        {isLoading ? 'Se procesează...' : 'Plătește Acum'}
-      </button>
-    </form>
-  );
-};
-
-// Componenta principală a paginii
-const CheckoutPage = () => {
-  const [clientSecret, setClientSecret] = useState('');
-  const { cartItems } = useCart();
+  const orderId = params.id;
 
   useEffect(() => {
-    // Creăm un PaymentIntent de îndată ce pagina se încarcă
-    if (cartItems.length > 0) {
-      fetch('/api/create-payment-intent', {
-        method: 'POST',
-        headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({ cartItems }),
-      })
-        .then((res) => res.json())
-        .then((data) => setClientSecret(data.clientSecret));
-    }
-  }, [cartItems]);
+    if (!orderId) return;
 
-  const options: StripeElementsOptions = {
-    clientSecret,
-    appearance: { theme: 'stripe' },
+    const fetchOrderDetails = async () => {
+      try {
+        const docRef = doc(db, "orders", orderId);
+        const docSnap = await getDoc(docRef);
+
+        if (docSnap.exists()) {
+          setOrder({ id: docSnap.id, ...docSnap.data() } as OrderDetails);
+        } else {
+          setError("Comanda nu a fost găsită.");
+        }
+      } catch (err) {
+        console.error("Eroare la preluarea detaliilor comenzii: ", err);
+        setError("A apărut o eroare la încărcarea datelor.");
+      } finally {
+        setIsLoading(false);
+      }
+    };
+
+    fetchOrderDetails();
+  }, [orderId]);
+
+  const formatDate = (timestamp: Timestamp) => {
+    if (!timestamp) return 'Dată invalidă';
+    return timestamp.toDate().toLocaleString('ro-RO');
   };
 
+  if (isLoading) {
+    return <div className="p-8 text-center">Se încarcă detaliile comenzii...</div>;
+  }
+
+  if (error) {
+    return <div className="p-8 text-center text-red-600">{error}</div>;
+  }
+
+  if (!order) {
+    return <div className="p-8 text-center">Comanda nu a fost găsită.</div>;
+  }
+
   return (
-    <div className="bg-gray-50">
-      <div className="max-w-2xl mx-auto pt-16 pb-24 px-4 sm:px-6 lg:max-w-7xl lg:px-8">
-        <h1 className="text-3xl font-extrabold text-gray-900 mb-8">Finalizează comanda</h1>
-        {clientSecret && (
-          <Elements options={options} stripe={stripePromise}>
-            {/* #################################################################### */}
-            {/* ## MODIFICARE 3: Pasăm `clientSecret` către componenta formularului ## */}
-            {/* #################################################################### */}
-            <CheckoutForm clientSecret={clientSecret} />
-          </Elements>
-        )}
+    <div className="min-h-screen bg-gray-100 p-4 sm:p-6 lg:p-8">
+      <div className="max-w-4xl mx-auto">
+        <div className="mb-6">
+          <Link href="/admin/orders" className="text-indigo-600 hover:text-indigo-800">
+            &larr; Înapoi la toate comenzile
+          </Link>
+        </div>
+        <div className="bg-white p-8 rounded-lg shadow-md">
+          <div className="flex justify-between items-start mb-6">
+            <div>
+              <h1 className="text-2xl font-bold text-gray-900">Detalii Comandă</h1>
+              <p className="text-sm text-gray-500">ID Comandă: {order.id}</p>
+              <p className="text-sm text-gray-500">Dată: {formatDate(order.createdAt)}</p>
+            </div>
+            <span className="px-3 py-1 text-sm font-semibold rounded-full bg-yellow-100 text-yellow-800">
+              {order.status}
+            </span>
+          </div>
+
+          {/* Detalii Client și Livrare */}
+          <div className="grid grid-cols-1 md:grid-cols-2 gap-6 border-t pt-6">
+            <div>
+              <h2 className="text-lg font-semibold text-gray-800">Client</h2>
+              <p className="text-gray-600">{order.shippingInfo.name}</p>
+              <p className="text-gray-600">{order.shippingInfo.email}</p>
+            </div>
+            <div>
+              <h2 className="text-lg font-semibold text-gray-800">Adresă de livrare</h2>
+              <p className="text-gray-600">{order.shippingInfo.address}</p>
+              <p className="text-gray-600">{order.shippingInfo.city}, {order.shippingInfo.postalCode}</p>
+            </div>
+          </div>
+
+          {/* Lista de Produse */}
+          <div className="border-t mt-6 pt-6">
+            <h2 className="text-lg font-semibold text-gray-800 mb-4">Produse Comandate</h2>
+            <ul className="divide-y divide-gray-200">
+              {order.cartItems.map(item => (
+                <li key={item.id} className="flex py-4 justify-between items-center">
+                  <div>
+                    <p className="font-medium text-gray-800">{item.name}</p>
+                    <p className="text-sm text-gray-500">Cantitate: {item.quantity}</p>
+                  </div>
+                  <p className="text-gray-800 font-medium">
+                    {(item.price * item.quantity).toFixed(2)} RON
+                  </p>
+                </li>
+              ))}
+            </ul>
+          </div>
+          
+          {/* Total */}
+          <div className="border-t mt-6 pt-6 flex justify-end">
+            <div className="text-right">
+              <p className="text-gray-600">Subtotal: {order.total.toFixed(2)} RON</p>
+              <p className="text-gray-600">Livrare: 0.00 RON</p>
+              <p className="text-xl font-bold text-gray-900 mt-2">Total: {order.total.toFixed(2)} RON</p>
+            </div>
+          </div>
+        </div>
       </div>
     </div>
   );
-};
-
-export default CheckoutPage;
+}

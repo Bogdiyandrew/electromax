@@ -30,8 +30,11 @@ interface OrderDetails {
   status: string;
 }
 
-// Folosim `params` pentru a prelua ID-ul din URL
-export default function OrderDetailPage({ params }: { params: { id: string } }) {
+// #######################################################################
+// ## MODIFICARE AICI: Am aplicat workaround-ul pentru eroarea PageProps ##
+// #######################################################################
+// eslint-disable-next-line @typescript-eslint/no-explicit-any
+export default function OrderDetailPage({ params }: any) {
   const [order, setOrder] = useState<OrderDetails | null>(null);
   const [isLoading, setIsLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
