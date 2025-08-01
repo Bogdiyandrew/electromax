@@ -75,19 +75,28 @@ const AdminDashboard = () => {
 
           <div className="mt-8">
             <h3 className="text-lg font-medium text-gray-900">Acțiuni Rapide</h3>
-            <div className="mt-4 flex gap-4">
-              <button
-                onClick={handleAddTestProduct}
-                className="px-4 py-2 font-medium text-white bg-green-600 rounded-md hover:bg-green-700 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-green-500"
+            <div className="mt-4 flex flex-wrap gap-4">
+              {/* ################################################# */}
+              {/* ## LINK NOU ADĂUGAT AICI                       ## */}
+              {/* ################################################# */}
+              <Link 
+                href="/admin/orders"
+                className="px-4 py-2 font-medium text-white bg-blue-600 rounded-md hover:bg-blue-700"
               >
-                Adaugă Produs Test
-              </button>
+                Vezi Comenzile
+              </Link>
               <Link 
                 href="/admin/add-product"
                 className="px-4 py-2 font-medium text-white bg-indigo-600 rounded-md hover:bg-indigo-700"
               >
-                Adaugă un Produs Nou (Formular)
+                Adaugă Produs Nou
               </Link>
+              <button
+                onClick={handleAddTestProduct}
+                className="px-4 py-2 font-medium text-white bg-green-600 rounded-md hover:bg-green-700"
+              >
+                Adaugă Produs Test
+              </button>
             </div>
           </div>
         </div>
