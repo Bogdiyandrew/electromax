@@ -2,7 +2,7 @@
 
 import { useEffect, useState } from 'react';
 import Link from 'next/link';
-import { doc, getDoc, Timestamp } from 'firebase/firestore';
+import { doc, getDoc, updateDoc, Timestamp } from 'firebase/firestore';
 import { db } from '@/firebase/config';
 
 // Definim interfețele pentru o structură clară a datelor
@@ -30,14 +30,18 @@ interface OrderDetails {
   status: string;
 }
 
-// #######################################################################
-// ## MODIFICARE AICI: Am aplicat workaround-ul pentru eroarea PageProps ##
-// #######################################################################
+// Folosim `params` pentru a prelua ID-ul din URL
 // eslint-disable-next-line @typescript-eslint/no-explicit-any
 export default function OrderDetailPage({ params }: any) {
   const [order, setOrder] = useState<OrderDetails | null>(null);
   const [isLoading, setIsLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
+  
+  // #################################################################
+  // ## State-uri noi pentru managementul statusului              ##
+  // #################################################################
+  const [selectedStatus, setSelectedStatus] = useState('');
+  const [isUpdating, setIsUpdating] = useState(false);
 
   const orderId = params.id;
 
@@ -50,7 +54,9 @@ export default function OrderDetailPage({ params }: any) {
         const docSnap = await getDoc(docRef);
 
         if (docSnap.exists()) {
-          setOrder({ id: docSnap.id, ...docSnap.data() } as OrderDetails);
+          const orderData = { id: docSnap.id, ...docSnap.data() } as OrderDetails;
+          setOrder(orderData);
+          setSelectedStatus(orderData.status); // Inițializăm select-ul cu statusul curent
         } else {
           setError("Comanda nu a fost găsită.");
         }
@@ -65,22 +71,37 @@ export default function OrderDetailPage({ params }: any) {
     fetchOrderDetails();
   }, [orderId]);
 
+  // #################################################################
+  // ## Funcție nouă pentru a actualiza statusul în Firestore       ##
+  // #################################################################
+  const handleStatusUpdate = async () => {
+    setIsUpdating(true);
+    try {
+      const orderRef = doc(db, "orders", orderId);
+      await updateDoc(orderRef, {
+        status: selectedStatus
+      });
+      // Actualizăm și starea locală pentru a reflecta imediat schimbarea
+      if (order) {
+        setOrder({ ...order, status: selectedStatus });
+      }
+      alert("Statusul comenzii a fost actualizat cu succes!");
+    } catch (err) {
+      console.error("Eroare la actualizarea statusului: ", err);
+      alert("Nu s-a putut actualiza statusul comenzii.");
+    } finally {
+      setIsUpdating(false);
+    }
+  };
+
   const formatDate = (timestamp: Timestamp) => {
     if (!timestamp) return 'Dată invalidă';
     return timestamp.toDate().toLocaleString('ro-RO');
   };
 
-  if (isLoading) {
-    return <div className="p-8 text-center">Se încarcă detaliile comenzii...</div>;
-  }
-
-  if (error) {
-    return <div className="p-8 text-center text-red-600">{error}</div>;
-  }
-
-  if (!order) {
-    return <div className="p-8 text-center">Comanda nu a fost găsită.</div>;
-  }
+  if (isLoading) return <div className="p-8 text-center">Se încarcă detaliile comenzii...</div>;
+  if (error) return <div className="p-8 text-center text-red-600">{error}</div>;
+  if (!order) return <div className="p-8 text-center">Comanda nu a fost găsită.</div>;
 
   return (
     <div className="min-h-screen bg-gray-100 p-4 sm:p-6 lg:p-8">
@@ -97,12 +118,11 @@ export default function OrderDetailPage({ params }: any) {
               <p className="text-sm text-gray-500">ID Comandă: {order.id}</p>
               <p className="text-sm text-gray-500">Dată: {formatDate(order.createdAt)}</p>
             </div>
-            <span className="px-3 py-1 text-sm font-semibold rounded-full bg-yellow-100 text-yellow-800">
+            <span className={`px-3 py-1 text-sm font-semibold rounded-full ${order.status === 'Finalizat' ? 'bg-green-100 text-green-800' : 'bg-yellow-100 text-yellow-800'}`}>
               {order.status}
             </span>
           </div>
 
-          {/* Detalii Client și Livrare */}
           <div className="grid grid-cols-1 md:grid-cols-2 gap-6 border-t pt-6">
             <div>
               <h2 className="text-lg font-semibold text-gray-800">Client</h2>
@@ -116,7 +136,6 @@ export default function OrderDetailPage({ params }: any) {
             </div>
           </div>
 
-          {/* Lista de Produse */}
           <div className="border-t mt-6 pt-6">
             <h2 className="text-lg font-semibold text-gray-800 mb-4">Produse Comandate</h2>
             <ul className="divide-y divide-gray-200">
@@ -134,8 +153,31 @@ export default function OrderDetailPage({ params }: any) {
             </ul>
           </div>
           
-          {/* Total */}
-          <div className="border-t mt-6 pt-6 flex justify-end">
+          <div className="border-t mt-6 pt-6 flex justify-between items-center">
+            {/* ################################################################# */}
+            {/* ## Componente noi pentru actualizarea statusului             ## */}
+            {/* ################################################################# */}
+            <div className="flex items-center gap-4">
+               <select 
+                value={selectedStatus}
+                onChange={(e) => setSelectedStatus(e.target.value)}
+                className="rounded-md border-gray-300 shadow-sm focus:border-indigo-500 focus:ring-indigo-500 text-gray-900"
+              >
+                <option value="pending">Pending</option>
+                <option value="În procesare">În procesare</option>
+                <option value="Expediat">Expediat</option>
+                <option value="Finalizat">Finalizat</option>
+                <option value="Anulat">Anulat</option>
+              </select>
+              <button
+                onClick={handleStatusUpdate}
+                disabled={isUpdating}
+                className="px-4 py-2 font-medium text-white bg-indigo-600 rounded-md hover:bg-indigo-700 disabled:bg-indigo-400"
+              >
+                {isUpdating ? 'Se actualizează...' : 'Actualizează Status'}
+              </button>
+            </div>
+            
             <div className="text-right">
               <p className="text-gray-600">Subtotal: {order.total.toFixed(2)} RON</p>
               <p className="text-gray-600">Livrare: 0.00 RON</p>
