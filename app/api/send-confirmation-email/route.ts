@@ -6,16 +6,21 @@ import { db } from '@/firebase/config';
 // Inițializează Resend cu cheia API din variabilele de mediu
 const resend = new Resend(process.env.RESEND_API_KEY);
 
+// MODIFICARE: Am definit un tip pentru produsele din coș
+interface CartItem {
+  name: string;
+  quantity: number;
+  price: number;
+}
+
 export async function POST(req: Request) {
   try {
-    // Preluăm ID-ul comenzii din corpul cererii
     const { orderId } = await req.json();
 
     if (!orderId) {
       return new NextResponse("ID-ul comenzii lipsește", { status: 400 });
     }
 
-    // Căutăm detaliile comenzii în Firestore
     const orderRef = doc(db, 'orders', orderId);
     const orderSnap = await getDoc(orderRef);
 
@@ -26,18 +31,18 @@ export async function POST(req: Request) {
     const orderData = orderSnap.data();
     const { shippingInfo, cartItems, total } = orderData;
     
-    // Construim lista de produse pentru email
-    const productsHtml = cartItems.map((item: any) => `
+    // MODIFICARE: Am folosit tipul CartItem în loc de 'any'
+    const productsHtml = cartItems.map((item: CartItem) => `
       <tr>
         <td>${item.name} (x${item.quantity})</td>
         <td style="text-align: right;">${(item.price * item.quantity).toFixed(2)} RON</td>
       </tr>
     `).join('');
 
-    // Trimitem email-ul folosind Resend
-    const { data, error } = await resend.emails.send({
-      from: 'ElectroMax <suport@electro-max.ro>', // Folosește adresa ta de email verificată
-      to: [shippingInfo.email], // Email-ul clientului
+    // MODIFICARE: Am eliminat 'data' care nu era folosit
+    const { error } = await resend.emails.send({
+      from: 'ElectroMax <suport@electro-max.ro>',
+      to: [shippingInfo.email],
       subject: `Confirmare Comandă #${orderId.substring(0, 6)}`,
       html: `
         <h1>Mulțumim pentru comanda ta, ${shippingInfo.name}!</h1>

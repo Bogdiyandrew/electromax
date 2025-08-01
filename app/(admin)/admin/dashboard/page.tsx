@@ -6,9 +6,10 @@ import Link from 'next/link';
 import { signOut } from 'firebase/auth';
 import { collection, getDocs, query, orderBy, Timestamp } from 'firebase/firestore';
 import { auth, db } from '@/firebase/config';
-import { ShoppingCart, Package, DollarSign, ListOrdered } from 'lucide-react';
+// MODIFICARE: Am șters 'ListOrdered' care nu era folosit
+import { ShoppingCart, Package, DollarSign } from 'lucide-react';
 
-// Definim interfețele pentru datele pe care le preluăm
+// Definim interfața doar pentru Comenzi, deoarece doar pe ea o folosim
 interface Order {
   id: string;
   total: number;
@@ -16,11 +17,8 @@ interface Order {
   createdAt: Timestamp;
 }
 
-interface Product {
-  id: string;
-}
+// MODIFICARE: Am șters interfața 'Product' care nu era folosită
 
-// O componentă mică pentru cardurile de statistici
 const StatCard = ({ title, value, icon, color }: { title: string; value: string | number; icon: React.ReactNode; color: string }) => (
   <div className="bg-white p-6 rounded-lg shadow-md flex items-center">
     <div className={`p-3 rounded-full mr-4 ${color}`}>
@@ -42,11 +40,9 @@ const AdminDashboard = () => {
   useEffect(() => {
     const fetchData = async () => {
       try {
-        // Preluăm produsele pentru a le număra
         const productsSnapshot = await getDocs(collection(db, "products"));
         const productCount = productsSnapshot.size;
 
-        // Preluăm comenzile pentru a calcula veniturile și a afișa cele mai recente
         const ordersQuery = query(collection(db, "orders"), orderBy("createdAt", "desc"));
         const ordersSnapshot = await getDocs(ordersQuery);
         
@@ -58,7 +54,7 @@ const AdminDashboard = () => {
         });
         
         setStats({ totalRevenue, orderCount: ordersSnapshot.size, productCount });
-        setRecentOrders(ordersData.slice(0, 5)); // Păstrăm doar cele mai recente 5 comenzi
+        setRecentOrders(ordersData.slice(0, 5));
 
       } catch (error) {
         console.error("Eroare la preluarea datelor pentru dashboard:", error);
@@ -105,7 +101,6 @@ const AdminDashboard = () => {
             </p>
           </div>
 
-          {/* Secțiunea de Statistici */}
           <div className="mt-8 grid grid-cols-1 gap-5 sm:grid-cols-2 lg:grid-cols-3">
             {isLoading ? (
               <p>Se încarcă statisticile...</p>
@@ -118,7 +113,6 @@ const AdminDashboard = () => {
             )}
           </div>
 
-          {/* Secțiunea de Navigare și Comenzi Recente */}
           <div className="mt-10 grid grid-cols-1 lg:grid-cols-3 gap-8">
             <div className="lg:col-span-1">
               <h3 className="text-lg font-medium text-gray-900">Acțiuni Rapide</h3>

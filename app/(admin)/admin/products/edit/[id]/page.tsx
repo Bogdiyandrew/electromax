@@ -28,7 +28,6 @@ const EditProductPage = ({ params }: any) => {
   const [isUpdating, setIsUpdating] = useState(false);
   const [error, setError] = useState<string | null>(null);
 
-  // Preluăm datele produsului existent
   useEffect(() => {
     if (!productId) return;
     const fetchProduct = async () => {
@@ -49,6 +48,8 @@ const EditProductPage = ({ params }: any) => {
           setError("Produsul nu a fost găsit.");
         }
       } catch (err) {
+        // MODIFICARE: Folosim 'err' pentru a loga eroarea
+        console.error("Eroare la preluarea produsului:", err);
         setError("Eroare la încărcarea produsului.");
       } finally {
         setIsLoading(false);
@@ -74,14 +75,12 @@ const EditProductPage = ({ params }: any) => {
     setError(null);
 
     try {
-      let downloadURL = currentImageUrl; // Păstrăm imaginea veche implicit
+      let downloadURL = currentImageUrl;
 
-      // Dacă a fost selectată o imagine nouă, o încărcăm
       if (imageFile) {
         const storageRef = ref(storage, `products/${Date.now()}_${imageFile.name}`);
         await uploadBytes(storageRef, imageFile);
         downloadURL = await getDownloadURL(storageRef);
-        // Aici ai putea adăuga logica pentru a șterge imaginea veche din Storage
       }
       
       const updatedProduct = {
