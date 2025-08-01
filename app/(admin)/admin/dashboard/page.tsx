@@ -19,7 +19,6 @@ const AdminDashboard = () => {
     }
   };
 
-  // Funcție pentru a adăuga un produs de test
   const handleAddTestProduct = async () => {
     try {
       const testProduct = {
@@ -29,11 +28,10 @@ const AdminDashboard = () => {
         stock: 100,
         category: 'Iluminat',
         createdAt: new Date(),
+        imageUrl: 'https://firebasestorage.googleapis.com/v0/b/electromax-86641.appspot.com/o/products%2F1722497699933_bec.jpeg?alt=media&token=487d27e1-88f6-4e14-8025-a131238d9709' // Imagine de test
       };
-
-      const docRef = await addDoc(collection(db, "products"), testProduct);
-      
-      alert(`Produs de test adăugat cu succes! ID: ${docRef.id}`);
+      await addDoc(collection(db, "products"), testProduct);
+      alert(`Produs de test adăugat cu succes!`);
     } catch (e) {
       console.error("Eroare la adăugarea documentului: ", e);
       alert("A apărut o eroare la adăugarea produsului.");
@@ -42,7 +40,6 @@ const AdminDashboard = () => {
 
   return (
     <div className="min-h-screen bg-gray-50">
-      {/* Bara de navigare de sus */}
       <nav className="bg-white shadow-sm">
         <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
           <div className="flex justify-between h-16">
@@ -54,7 +51,7 @@ const AdminDashboard = () => {
             <div className="flex items-center">
               <button
                 onClick={handleLogout}
-                className="px-4 py-2 text-sm font-medium text-white bg-red-600 rounded-md hover:bg-red-700 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-red-500"
+                className="px-4 py-2 text-sm font-medium text-white bg-red-600 rounded-md hover:bg-red-700"
               >
                 Logout
               </button>
@@ -63,7 +60,6 @@ const AdminDashboard = () => {
         </div>
       </nav>
 
-      {/* Conținutul principal al paginii */}
       <main className="py-10">
         <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
           <div className="pb-8 border-b border-gray-200">
@@ -79,7 +75,13 @@ const AdminDashboard = () => {
               {/* ################################################# */}
               {/* ## LINK NOU ADĂUGAT AICI                       ## */}
               {/* ################################################# */}
-              <Link 
+               <Link 
+                href="/admin/products"
+                className="px-4 py-2 font-medium text-white bg-gray-700 rounded-md hover:bg-gray-800"
+              >
+                Gestionează Produse
+              </Link>
+               <Link 
                 href="/admin/orders"
                 className="px-4 py-2 font-medium text-white bg-blue-600 rounded-md hover:bg-blue-700"
               >
