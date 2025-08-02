@@ -9,10 +9,17 @@ export interface CartItem {
   quantity: number;
 }
 
+interface AddToCartProduct {
+    id: string;
+    name: string;
+    price: number;
+    stock: number;
+    isUnlimited?: boolean;
+}
+
 interface CartContextType {
   cartItems: CartItem[];
-  // MODIFICARE: Funcția acceptă acum și stocul maxim
-  addToCart: (product: { id: string; name: string; price: number; stock: number }, quantity: number) => void;
+  addToCart: (product: AddToCartProduct, quantity: number) => void;
   removeFromCart: (itemId: string) => void;
   updateItemQuantity: (itemId: string, newQuantity: number) => void;
   clearCart: () => void;
@@ -21,44 +28,43 @@ interface CartContextType {
 const CartContext = createContext<CartContextType | undefined>(undefined);
 
 export const CartProvider = ({ children }: { children: ReactNode }) => {
-  const [cartItems, setCartItems] = useState<CartItem[]>(() => {
+  const [cartItems, setCartItems] = useState<CartItem[]>([]);
+
+  useEffect(() => {
     if (typeof window !== 'undefined') {
       const savedCart = localStorage.getItem('cart');
-      return savedCart ? JSON.parse(savedCart) : [];
+      setCartItems(savedCart ? JSON.parse(savedCart) : []);
     }
-    return [];
-  });
+  }, []);
 
   useEffect(() => {
     localStorage.setItem('cart', JSON.stringify(cartItems));
   }, [cartItems]);
 
-  // #################################################################
-  // ## MODIFICARE MAJORĂ: Logica de adăugare validează acum stocul  ##
-  // #################################################################
-  const addToCart = (product: { id: string; name: string; price: number; stock: number }, quantity: number) => {
+  const addToCart = (product: AddToCartProduct, quantity: number) => {
+    let itemAdded = false;
     setCartItems(prevItems => {
       const existingItem = prevItems.find(item => item.id === product.id);
       
       if (existingItem) {
         const newQuantity = existingItem.quantity + quantity;
-        // Verificăm dacă noua cantitate totală depășește stocul
-        if (newQuantity > product.stock) {
+        
+        if (!product.isUnlimited && newQuantity > product.stock) {
           alert(`Stoc insuficient! Poți adăuga maxim ${product.stock} bucăți pentru "${product.name}". Momentan ai deja ${existingItem.quantity} în coș.`);
-          // Nu modificăm coșul dacă stocul este depășit
           return prevItems;
         }
-        // Dacă stocul permite, actualizăm cantitatea
+        
+        itemAdded = true;
         return prevItems.map(item =>
           item.id === product.id ? { ...item, quantity: newQuantity } : item
         );
       } else {
-        // Dacă produsul nu există, îl adăugăm cu cantitatea specificată (deja validată pe pagina produsului)
+        itemAdded = true;
         return [...prevItems, { id: product.id, name: product.name, price: product.price, quantity }];
       }
     });
-    // Afișăm alerta doar dacă adăugarea s-a făcut (nu se execută dacă stocul e depășit)
-    if (!cartItems.find(item => item.id === product.id && item.quantity + quantity > product.stock)) {
+
+    if (itemAdded) {
       alert(`"${product.name}" (x${quantity}) a fost adăugat în coș!`);
     }
   };

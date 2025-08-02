@@ -15,6 +15,7 @@ interface Product {
   stock: number;
   imageUrl?: string;
   unit?: string;
+  isUnlimited?: boolean;
 }
 
 export default function ProductClientPage({ product }: { product: Product }) {
@@ -22,22 +23,20 @@ export default function ProductClientPage({ product }: { product: Product }) {
   const [quantity, setQuantity] = useState(1);
 
   const handleAddToCart = () => {
-    // #################################################################
-    // ## MODIFICARE: Trimitem acum și stocul produsului              ##
-    // #################################################################
     addToCart(
       {
         id: product.id,
         name: product.name,
         price: product.price,
-        stock: product.stock, // Am adăugat stocul aici
+        stock: product.isUnlimited ? Infinity : product.stock, // Trimitem stocul corect
+        isUnlimited: product.isUnlimited, // Trimitem și starea
       },
       quantity
     );
   };
 
   const increaseQuantity = () => {
-    if (quantity < product.stock) {
+    if (product.isUnlimited || quantity < product.stock) {
       setQuantity(prev => prev + 1);
     }
   };
@@ -71,12 +70,7 @@ export default function ProductClientPage({ product }: { product: Product }) {
                 <span className="text-gray-500">Imagine indisponibilă</span>
               )}
             </div>
-            <div className="grid grid-cols-4 gap-4 mt-4">
-              <div className="w-full h-24 bg-gray-200 rounded-md"></div>
-              <div className="w-full h-24 bg-gray-200 rounded-md"></div>
-              <div className="w-full h-24 bg-gray-200 rounded-md"></div>
-              <div className="w-full h-24 bg-gray-200 rounded-md"></div>
-            </div>
+            {/* ... galerie placeholder */}
           </div>
 
           <div className="space-y-6">
@@ -96,7 +90,11 @@ export default function ProductClientPage({ product }: { product: Product }) {
 
             <div>
               <p className="text-sm text-gray-500">
-                Stoc: <span className="font-medium text-green-600">{product.stock > 0 ? `${product.stock} ${product.unit || 'buc.'} disponibile` : 'Stoc epuizat'}</span>
+                Stoc: <span className="font-medium text-green-600">
+                    {product.isUnlimited 
+                        ? 'Disponibil la comandă' 
+                        : (product.stock > 0 ? `${product.stock} ${product.unit || 'buc.'} disponibile` : 'Stoc epuizat')}
+                </span>
               </p>
             </div>
 
@@ -106,15 +104,15 @@ export default function ProductClientPage({ product }: { product: Product }) {
                         <Minus size={16} />
                     </button>
                     <span className="px-5 py-2 text-gray-900 font-semibold">{quantity}</span>
-                    <button onClick={increaseQuantity} className="px-3 py-2 text-gray-600 hover:bg-gray-100 rounded-r-md" disabled={quantity >= product.stock}>
+                    <button onClick={increaseQuantity} className="px-3 py-2 text-gray-600 hover:bg-gray-100 rounded-r-md" disabled={!product.isUnlimited && quantity >= product.stock}>
                         <Plus size={16} />
                     </button>
                 </div>
                 <button
                 type="button"
                 onClick={handleAddToCart}
-                disabled={product.stock === 0}
-                className="flex-1 px-8 py-3 text-base font-bold text-white bg-indigo-600 rounded-md hover:bg-indigo-700 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-indigo-500 disabled:bg-gray-400 disabled:cursor-not-allowed"
+                disabled={!product.isUnlimited && product.stock === 0}
+                className="flex-1 px-8 py-3 text-base font-bold text-white bg-indigo-600 rounded-md hover:bg-indigo-700"
                 >
                 Adaugă în coș
                 </button>

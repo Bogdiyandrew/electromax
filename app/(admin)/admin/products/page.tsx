@@ -7,7 +7,6 @@ import { collection, getDocs, orderBy, query, doc, deleteDoc } from 'firebase/fi
 import { ref, deleteObject } from 'firebase/storage';
 import { db, storage } from '@/firebase/config';
 
-// Definim o interfață pentru structura unui produs
 interface Product {
   id: string;
   name: string;
@@ -16,6 +15,7 @@ interface Product {
   stock: number;
   imageUrl?: string;
   unit?: string;
+  isUnlimited?: boolean;
 }
 
 const AdminProductsPage = () => {
@@ -57,9 +57,6 @@ const AdminProductsPage = () => {
           const imageRef = ref(storage, imageUrl);
           await deleteObject(imageRef);
         } catch (err) {
-          // #################################################################
-          // ## CORECȚIE AICI: Am specificat tipul erorii în loc de 'any'   ##
-          // #################################################################
           const storageError = err as { code?: string };
           if (storageError.code === 'storage/object-not-found') {
             console.warn(`Imaginea la URL-ul ${imageUrl} nu a fost găsită în Storage, dar se continuă cu ștergerea produsului.`);
@@ -133,7 +130,11 @@ const AdminProductsPage = () => {
                         {product.price.toFixed(2)} RON
                       </td>
                        <td className="px-6 py-4 whitespace-nowrap text-sm text-gray-500">
-                        {product.stock} {product.unit || 'buc.'}
+                        {product.isUnlimited ? (
+                          <span className="text-green-600 font-semibold">Nelimitat</span>
+                        ) : (
+                          `${product.stock} ${product.unit || 'buc.'}`
+                        )}
                       </td>
                       <td className="px-6 py-4 whitespace-nowrap text-right text-sm font-medium">
                         <Link href={`/admin/products/edit/${product.id}`} className="text-indigo-600 hover:text-indigo-900 mr-4">

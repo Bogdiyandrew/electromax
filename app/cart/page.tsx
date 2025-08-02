@@ -4,36 +4,41 @@ import Link from 'next/link';
 import { useCart } from '@/context/CartContext';
 import { Trash2, Plus, Minus } from 'lucide-react';
 import { useState, useEffect } from 'react';
-import { doc, getDoc } from 'firebase/firestore'; // Am importat getDoc
-import { db } from '@/firebase/config'; // Am importat db
+import { doc, getDoc } from 'firebase/firestore';
+import { db } from '@/firebase/config';
+
+interface StockInfo {
+    stock: number;
+    isUnlimited: boolean;
+}
 
 const CartPage = () => {
   const { cartItems, removeFromCart, updateItemQuantity, clearCart } = useCart();
   const [isClient, setIsClient] = useState(false);
   
-  // #################################################################
-  // ## MODIFICARE: Stare nouă pentru a stoca informațiile despre stoc ##
-  // #################################################################
-  const [stockInfo, setStockInfo] = useState<Record<string, number>>({});
+  const [stockInfo, setStockInfo] = useState<Record<string, StockInfo>>({});
   const [isStockLoading, setIsStockLoading] = useState(true);
 
   useEffect(() => {
     setIsClient(true);
 
-    // Funcție pentru a prelua stocul pentru produsele din coș
     const fetchStockInfo = async () => {
       if (cartItems.length === 0) {
         setIsStockLoading(false);
         return;
       }
 
-      const newStockInfo: Record<string, number> = {};
+      const newStockInfo: Record<string, StockInfo> = {};
       try {
         for (const item of cartItems) {
           const productRef = doc(db, "products", item.id);
           const productSnap = await getDoc(productRef);
           if (productSnap.exists()) {
-            newStockInfo[item.id] = productSnap.data().stock || 0;
+            const data = productSnap.data();
+            newStockInfo[item.id] = { 
+                stock: data.stock || 0,
+                isUnlimited: data.isUnlimited || false,
+            };
           }
         }
         setStockInfo(newStockInfo);
@@ -70,8 +75,7 @@ const CartPage = () => {
           <div className="bg-white p-8 rounded-lg shadow-md">
             <ul className="divide-y divide-gray-200">
               {cartItems.map(item => {
-                // Preluăm stocul pentru produsul curent
-                const availableStock = stockInfo[item.id] ?? 0;
+                const productStockInfo = stockInfo[item.id] ?? { stock: 0, isUnlimited: false };
                 
                 return (
                   <li key={item.id} className="flex py-6 items-center">
@@ -82,10 +86,9 @@ const CartPage = () => {
                           <h3>{item.name}</h3>
                           <p className="ml-4">{(item.price * item.quantity).toFixed(2)} RON</p>
                         </div>
-                         {/* Afișăm un mesaj dacă stocul este depășit */}
-                        {item.quantity > availableStock && availableStock > 0 && (
+                        {!productStockInfo.isUnlimited && item.quantity > productStockInfo.stock && productStockInfo.stock > 0 && (
                             <p className="text-sm text-red-600 mt-1">
-                                Cantitate maximă atinsă ({availableStock} disponibile).
+                                Cantitate maximă atinsă ({productStockInfo.stock} disponibile).
                             </p>
                         )}
                       </div>
@@ -95,13 +98,10 @@ const CartPage = () => {
                             <Minus size={16} />
                           </button>
                           <span className="px-4 py-1 text-gray-900 font-semibold">{item.quantity}</span>
-                          {/* ############################################################# */}
-                          {/* ## MODIFICARE: Dezactivăm butonul dacă stocul e depășit   ## */}
-                          {/* ############################################################# */}
                           <button 
                             onClick={() => updateItemQuantity(item.id, item.quantity + 1)} 
                             className="px-2 py-1 text-gray-600 hover:bg-gray-100 rounded-r-md" 
-                            disabled={item.quantity >= availableStock}
+                            disabled={!productStockInfo.isUnlimited && item.quantity >= productStockInfo.stock}
                           >
                             <Plus size={16} />
                           </button>
@@ -128,14 +128,6 @@ const CartPage = () => {
                 <Link href="/checkout" className="flex items-center justify-center rounded-md border border-transparent bg-indigo-600 px-6 py-3 text-base font-medium text-white shadow-sm hover:bg-indigo-700">
                   Finalizează comanda
                 </Link>
-              </div>
-              <div className="mt-6 flex justify-center text-center text-sm text-gray-500">
-                <p>
-                  sau{' '}
-                  <button onClick={clearCart} type="button" className="font-medium text-red-600 hover:text-red-500">
-                    Golește coșul
-                  </button>
-                </p>
               </div>
             </div>
           </div>

@@ -11,7 +11,8 @@ interface Product {
   category: string;
   stock: number;
   imageUrl?: string;
-  unit?: string; // MODIFICARE: Am adăugat câmpul 'unit'
+  unit?: string;
+  isUnlimited?: boolean; // Am adăugat câmpul
 }
 
 async function getProduct(id: string): Promise<Product | null> {
@@ -30,7 +31,8 @@ async function getProduct(id: string): Promise<Product | null> {
     category: data.category,
     stock: data.stock,
     imageUrl: data.imageUrl || '',
-    unit: data.unit || 'buc.', // MODIFICARE: Preluăm câmpul 'unit' din baza de date
+    unit: data.unit || 'buc.',
+    isUnlimited: data.isUnlimited || false, // Preluăm câmpul
   };
 }
 

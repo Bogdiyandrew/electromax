@@ -14,7 +14,8 @@ interface ProductFormState {
   description: string;
   stock: string;
   category: string;
-  unit: string; // Câmp nou adăugat
+  unit: string;
+  isUnlimited: boolean;
 }
 
 // eslint-disable-next-line @typescript-eslint/no-explicit-any
@@ -22,8 +23,7 @@ const EditProductPage = ({ params }: any) => {
   const router = useRouter();
   const productId = params.id;
 
-  // MODIFICARE: Am adăugat 'unit' la starea inițială
-  const [formState, setFormState] = useState<ProductFormState>({ name: '', price: '', description: '', stock: '', category: '', unit: '' });
+  const [formState, setFormState] = useState<ProductFormState>({ name: '', price: '', description: '', stock: '', category: '', unit: '', isUnlimited: false });
   const [currentImageUrl, setCurrentImageUrl] = useState<string | null>(null);
   const [imageFile, setImageFile] = useState<File | null>(null);
   const [isLoading, setIsLoading] = useState(true);
@@ -44,7 +44,8 @@ const EditProductPage = ({ params }: any) => {
             description: data.description,
             stock: data.stock.toString(),
             category: data.category,
-            unit: data.unit || 'buc' // Am adăugat unitatea de măsură
+            unit: data.unit || 'buc',
+            isUnlimited: data.isUnlimited || false
           });
           setCurrentImageUrl(data.imageUrl || null);
         } else {
@@ -67,8 +68,9 @@ const EditProductPage = ({ params }: any) => {
   };
   
   const handleChange = (e: React.ChangeEvent<HTMLInputElement | HTMLTextAreaElement>) => {
-    const { name, value } = e.target;
-    setFormState(prevState => ({ ...prevState, [name]: value }));
+    const { name, value, type } = e.target;
+    const checked = (e.target as HTMLInputElement).checked;
+    setFormState(prevState => ({ ...prevState, [name]: type === 'checkbox' ? checked : value }));
   };
 
   const handleSubmit = async (e: FormEvent) => {
@@ -89,9 +91,10 @@ const EditProductPage = ({ params }: any) => {
         name: formState.name,
         price: parseFloat(formState.price),
         description: formState.description,
-        stock: parseInt(formState.stock, 10),
+        stock: formState.isUnlimited ? Infinity : parseInt(formState.stock, 10),
         category: formState.category,
-        unit: formState.unit, // Am adăugat unitatea de măsură
+        unit: formState.unit,
+        isUnlimited: formState.isUnlimited,
         imageUrl: downloadURL,
       };
 
@@ -116,9 +119,7 @@ const EditProductPage = ({ params }: any) => {
     <div className="min-h-screen bg-gray-100 p-4 sm:p-6 lg:p-8">
       <div className="max-w-4xl mx-auto">
         <div className="mb-6">
-          <Link href="/admin/products" className="text-indigo-600 hover:text-indigo-800">
-            &larr; Înapoi la listă
-          </Link>
+          <Link href="/admin/products" className="text-indigo-600 hover:text-indigo-800">&larr; Înapoi la listă</Link>
         </div>
         <div className="bg-white p-8 rounded-lg shadow-md">
           <h1 className="text-2xl font-bold text-gray-900 mb-6">Editează Produs</h1>
@@ -132,18 +133,21 @@ const EditProductPage = ({ params }: any) => {
             )}
             
             <input type="text" name="name" required placeholder="Nume Produs" value={formState.name} onChange={handleChange} className="mt-1 block w-full px-3 py-2 border border-gray-300 rounded-md text-gray-900"/>
-            <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
+            <div className="grid grid-cols-1 md:grid-cols-3 gap-4 items-end">
               <input type="number" step="0.01" name="price" required placeholder="Preț" value={formState.price} onChange={handleChange} className="md:col-span-1 mt-1 block w-full px-3 py-2 border border-gray-300 rounded-md text-gray-900"/>
-              <input type="number" name="stock" required placeholder="Stoc" value={formState.stock} onChange={handleChange} className="md:col-span-1 mt-1 block w-full px-3 py-2 border border-gray-300 rounded-md text-gray-900"/>
-              {/* MODIFICARE: Câmp nou pentru unitatea de măsură */}
+              <input type="number" name="stock" placeholder="Stoc" value={formState.stock} onChange={handleChange} disabled={formState.isUnlimited} required={!formState.isUnlimited} className="md:col-span-1 mt-1 block w-full px-3 py-2 border border-gray-300 rounded-md text-gray-900 disabled:bg-gray-200"/>
               <input type="text" name="unit" required placeholder="Unitate (ex: buc, ml, set)" value={formState.unit} onChange={handleChange} className="md:col-span-1 mt-1 block w-full px-3 py-2 border border-gray-300 rounded-md text-gray-900"/>
+            </div>
+            <div className="flex items-center">
+                <input type="checkbox" name="isUnlimited" id="isUnlimited" checked={formState.isUnlimited} onChange={handleChange} className="h-4 w-4 text-indigo-600 border-gray-300 rounded"/>
+                <label htmlFor="isUnlimited" className="ml-2 block text-sm text-gray-900">Stoc nelimitat (disponibil la comandă)</label>
             </div>
             <input type="text" name="category" required placeholder="Categorie" value={formState.category} onChange={handleChange} className="mt-1 block w-full px-3 py-2 border border-gray-300 rounded-md text-gray-900"/>
             <textarea name="description" rows={4} required placeholder="Descriere" value={formState.description} onChange={handleChange} className="mt-1 block w-full px-3 py-2 border border-gray-300 rounded-md text-gray-900"></textarea>
             
             <div>
               <label htmlFor="image" className="block text-sm font-medium text-gray-700">Schimbă Imaginea (opțional)</label>
-              <input type="file" name="image" id="image" onChange={handleImageChange} accept="image/png, image/jpeg" className="mt-1 block w-full text-sm file:mr-4 file:py-2 file:px-4 file:rounded-md file:border-0 file:bg-indigo-50"/>
+              <input type="file" name="image" id="image" onChange={handleImageChange} accept="image/png, image/jpeg" className="mt-1 block w-full text-sm"/>
             </div>
 
             <div className="flex justify-end">
