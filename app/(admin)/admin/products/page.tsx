@@ -15,6 +15,7 @@ interface Product {
   category: string;
   stock: number;
   imageUrl?: string;
+  unit?: string; // Am adăugat și unitatea aici
 }
 
 const AdminProductsPage = () => {
@@ -46,28 +47,27 @@ const AdminProductsPage = () => {
     fetchProducts();
   }, []);
 
-  // #################################################################
-  // ## FUNCȚIE NOUĂ: Logica pentru ștergerea unui produs           ##
-  // #################################################################
   const handleDelete = async (productId: string, imageUrl?: string) => {
-    // Adăugăm o confirmare pentru a preveni ștergerile accidentale
     if (!window.confirm("Ești sigur că vrei să ștergi acest produs? Acțiunea este ireversibilă.")) {
       return;
     }
 
     try {
-      // 1. Șterge imaginea din Firebase Storage, dacă există
       if (imageUrl) {
-        const imageRef = ref(storage, imageUrl);
-        await deleteObject(imageRef);
+        try {
+          const imageRef = ref(storage, imageUrl);
+          await deleteObject(imageRef);
+        } catch (storageError: any) {
+          if (storageError.code === 'storage/object-not-found') {
+            console.warn(`Imaginea la URL-ul ${imageUrl} nu a fost găsită în Storage, dar se continuă cu ștergerea produsului.`);
+          } else {
+            throw storageError;
+          }
+        }
       }
       
-      // 2. Șterge documentul produsului din Firestore
       await deleteDoc(doc(db, "products", productId));
-
-      // 3. Actualizează starea locală pentru a reflecta ștergerea în UI
       setProducts(prevProducts => prevProducts.filter(p => p.id !== productId));
-      
       alert("Produsul a fost șters cu succes!");
 
     } catch (err) {
@@ -130,12 +130,12 @@ const AdminProductsPage = () => {
                         {product.price.toFixed(2)} RON
                       </td>
                        <td className="px-6 py-4 whitespace-nowrap text-sm text-gray-500">
-                        {product.stock} buc.
+                        {/* ################################################# */}
+                        {/* ## CORECȚIE AICI: Afișăm unitatea dinamic       ## */}
+                        {/* ################################################# */}
+                        {product.stock} {product.unit || 'buc.'}
                       </td>
                       <td className="px-6 py-4 whitespace-nowrap text-right text-sm font-medium">
-                        {/* ################################################# */}
-                        {/* ## Am actualizat link-urile de acțiune aici    ## */}
-                        {/* ################################################# */}
                         <Link href={`/admin/products/edit/${product.id}`} className="text-indigo-600 hover:text-indigo-900 mr-4">
                             Editează
                         </Link>
