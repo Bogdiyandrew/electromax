@@ -1,7 +1,7 @@
 import { NextResponse } from 'next/server';
 import { Resend } from 'resend';
-import { doc, getDoc } from 'firebase/firestore';
-import { db } from '@/firebase/config';
+// Se importă configurația de ADMIN, nu cea de client!
+import { adminDb } from '@/firebase/admin-config';
 
 const resend = new Resend(process.env.RESEND_API_KEY);
 
@@ -14,19 +14,23 @@ interface CartItem {
 export async function POST(req: Request) {
   try {
     const { orderId } = await req.json();
-
     if (!orderId) {
       return new NextResponse("ID-ul comenzii lipsește", { status: 400 });
     }
 
-    const orderRef = doc(db, 'orders', orderId);
-    const orderSnap = await getDoc(orderRef);
+    // Se folosește 'adminDb' pentru a accesa Firestore cu privilegii de admin
+    const orderRef = adminDb.collection('orders').doc(orderId);
+    const orderSnap = await orderRef.get();
 
-    if (!orderSnap.exists()) {
+    if (!orderSnap.exists) {
       return new NextResponse("Comanda nu a fost găsită", { status: 404 });
     }
 
     const orderData = orderSnap.data();
+    if (!orderData) {
+        return new NextResponse("Datele comenzii sunt invalide", { status: 500 });
+    }
+
     const { shippingInfo, cartItems, total } = orderData;
     
     const productsHtml = cartItems.map((item: CartItem) => `
@@ -36,25 +40,27 @@ export async function POST(req: Request) {
       </tr>
     `).join('');
 
-    // #################################################################
-    // ## MODIFICARE: Verificăm dacă cheia API există înainte de a trimite ##
-    // #################################################################
-    if (!process.env.RESEND_API_KEY) {
-        console.error("Cheia API RESEND lipsește din variabilele de mediu!");
-        return new NextResponse("Configurare server incorectă.", { status: 500 });
-    }
-
     const { error } = await resend.emails.send({
-      // Pentru a testa, poți schimba temporar 'from' în: 'onboarding@resend.dev'
-      from: 'ElectroMax <suport@electro-max.ro>', 
+      from: 'ElectroMax <suport@electro-max.ro>',
       to: [shippingInfo.email],
       subject: `Confirmare Comandă #${orderId.substring(0, 6)}`,
-      html: `<h1>Detalii comandă...</h1>` // Simplificat pentru test
+      html: `
+        <h1>Mulțumim pentru comanda ta, ${shippingInfo.name}!</h1>
+        <p>Am primit comanda ta și o vom procesa în cel mai scurt timp.</p>
+        <h3>Detalii Comandă:</h3>
+        <table width="100%">
+          ${productsHtml}
+          <tr><td colspan="2"><hr/></td></tr>
+          <tr style="font-weight: bold;">
+            <td>Total</td>
+            <td style="text-align: right;">${total.toFixed(2)} RON</td>
+          </tr>
+        </table>
+        <p>Vei primi un alt email când comanda ta va fi expediată.</p>
+        <p>Cu respect,<br/>Echipa ElectroMax</p>
+      `,
     });
-    
-    // #################################################################
-    // ## MODIFICARE: Logare detaliată a erorii de la Resend          ##
-    // #################################################################
+
     if (error) {
       console.error("Eroare primită de la Resend:", JSON.stringify(error, null, 2));
       return NextResponse.json({ message: "Eroare la trimiterea email-ului", errorDetails: error }, { status: 500 });
@@ -64,7 +70,6 @@ export async function POST(req: Request) {
 
   } catch (error) {
     console.error("Eroare internă în API route:", error);
-    const err = error as Error;
-    return new NextResponse(err.message, { status: 500 });
+    return new NextResponse("Eroare internă de server", { status: 500 });
   }
 }
