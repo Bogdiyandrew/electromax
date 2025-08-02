@@ -1,10 +1,10 @@
 'use client';
 
-import { useState } from 'react'; // Am adăugat useState
+import { useState } from 'react';
 import Link from 'next/link';
 import Image from 'next/image';
 import { useCart } from '@/context/CartContext';
-import { Minus, Plus } from 'lucide-react'; // Importăm iconițe
+import { Minus, Plus } from 'lucide-react';
 
 // Definim o interfață pentru structura unui produs
 interface Product {
@@ -15,13 +15,13 @@ interface Product {
   category: string;
   stock: number;
   imageUrl?: string;
-  unit?: string; // Am adăugat câmpul opțional pentru unitate
+  unit?: string;
 }
 
 // Componenta primește produsul ca proprietate (props)
 export default function ProductClientPage({ product }: { product: Product }) {
   const { addToCart } = useCart();
-  const [quantity, setQuantity] = useState(1); // Stare pentru cantitatea selectată
+  const [quantity, setQuantity] = useState(1);
 
   const handleAddToCart = () => {
     addToCart(
@@ -30,12 +30,11 @@ export default function ProductClientPage({ product }: { product: Product }) {
         name: product.name,
         price: product.price,
       },
-      quantity // Pasăm cantitatea selectată
+      quantity
     );
   };
 
   const increaseQuantity = () => {
-    // Nu permitem adăugarea unei cantități mai mari decât stocul
     if (quantity < product.stock) {
       setQuantity(prev => prev + 1);
     }
@@ -95,12 +94,13 @@ export default function ProductClientPage({ product }: { product: Product }) {
 
             <div>
               <p className="text-sm text-gray-500">
-                {/* MODIFICARE: Am adăugat și unitatea de măsură */}
+                {/* ################################################# */}
+                {/* ## CORECȚIE AICI: Afișăm unitatea dinamic       ## */}
+                {/* ################################################# */}
                 Stoc: <span className="font-medium text-green-600">{product.stock > 0 ? `${product.stock} ${product.unit || 'buc.'} disponibile` : 'Stoc epuizat'}</span>
               </p>
             </div>
 
-            {/* MODIFICARE: Am adăugat selectorul de cantitate și am actualizat butonul */}
             <div className="flex items-center gap-4">
                 <div className="flex items-center border border-gray-300 rounded-md">
                     <button onClick={decreaseQuantity} className="px-3 py-2 text-gray-600 hover:bg-gray-100 rounded-l-md" disabled={quantity <= 1}>
