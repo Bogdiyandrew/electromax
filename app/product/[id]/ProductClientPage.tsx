@@ -22,11 +22,15 @@ export default function ProductClientPage({ product }: { product: Product }) {
   const [quantity, setQuantity] = useState(1);
 
   const handleAddToCart = () => {
+    // #################################################################
+    // ## MODIFICARE: Trimitem acum și stocul produsului              ##
+    // #################################################################
     addToCart(
       {
         id: product.id,
         name: product.name,
         price: product.price,
+        stock: product.stock, // Am adăugat stocul aici
       },
       quantity
     );

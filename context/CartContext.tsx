@@ -2,7 +2,6 @@
 
 import React, { createContext, useState, useContext, ReactNode, useEffect } from 'react';
 
-// Definim structura unui produs din coș - ACUM ESTE EXPORTATĂ
 export interface CartItem {
   id: string;
   name: string;
@@ -10,20 +9,17 @@ export interface CartItem {
   quantity: number;
 }
 
-// Definim ce va conține contextul nostru
 interface CartContextType {
   cartItems: CartItem[];
-  // MODIFICARE: Funcția acceptă acum și o cantitate
-  addToCart: (product: { id: string; name: string; price: number }, quantity: number) => void;
+  // MODIFICARE: Funcția acceptă acum și stocul maxim
+  addToCart: (product: { id: string; name: string; price: number; stock: number }, quantity: number) => void;
   removeFromCart: (itemId: string) => void;
   updateItemQuantity: (itemId: string, newQuantity: number) => void;
   clearCart: () => void;
 }
 
-// Creăm contextul cu o valoare implicită
 const CartContext = createContext<CartContextType | undefined>(undefined);
 
-// Creăm Provider-ul, componenta care va ține logica
 export const CartProvider = ({ children }: { children: ReactNode }) => {
   const [cartItems, setCartItems] = useState<CartItem[]>(() => {
     if (typeof window !== 'undefined') {
@@ -37,21 +33,34 @@ export const CartProvider = ({ children }: { children: ReactNode }) => {
     localStorage.setItem('cart', JSON.stringify(cartItems));
   }, [cartItems]);
 
-  // MODIFICARE: addToCart acceptă acum și parametrul 'quantity'
-  const addToCart = (product: { id: string; name: string; price: number }, quantity: number) => {
+  // #################################################################
+  // ## MODIFICARE MAJORĂ: Logica de adăugare validează acum stocul  ##
+  // #################################################################
+  const addToCart = (product: { id: string; name: string; price: number; stock: number }, quantity: number) => {
     setCartItems(prevItems => {
       const existingItem = prevItems.find(item => item.id === product.id);
+      
       if (existingItem) {
-        // Dacă produsul există, adăugăm noua cantitate la cea existentă
+        const newQuantity = existingItem.quantity + quantity;
+        // Verificăm dacă noua cantitate totală depășește stocul
+        if (newQuantity > product.stock) {
+          alert(`Stoc insuficient! Poți adăuga maxim ${product.stock} bucăți pentru "${product.name}". Momentan ai deja ${existingItem.quantity} în coș.`);
+          // Nu modificăm coșul dacă stocul este depășit
+          return prevItems;
+        }
+        // Dacă stocul permite, actualizăm cantitatea
         return prevItems.map(item =>
-          item.id === product.id ? { ...item, quantity: item.quantity + quantity } : item
+          item.id === product.id ? { ...item, quantity: newQuantity } : item
         );
       } else {
-        // Dacă produsul nu există, îl adăugăm cu cantitatea specificată
-        return [...prevItems, { ...product, quantity }];
+        // Dacă produsul nu există, îl adăugăm cu cantitatea specificată (deja validată pe pagina produsului)
+        return [...prevItems, { id: product.id, name: product.name, price: product.price, quantity }];
       }
     });
-    alert(`"${product.name}" (x${quantity}) a fost adăugat în coș!`);
+    // Afișăm alerta doar dacă adăugarea s-a făcut (nu se execută dacă stocul e depășit)
+    if (!cartItems.find(item => item.id === product.id && item.quantity + quantity > product.stock)) {
+      alert(`"${product.name}" (x${quantity}) a fost adăugat în coș!`);
+    }
   };
 
   const removeFromCart = (itemId: string) => {
@@ -78,7 +87,6 @@ export const CartProvider = ({ children }: { children: ReactNode }) => {
   );
 };
 
-// Creăm un hook personalizat pentru a folosi contextul mai ușor
 export const useCart = () => {
   const context = useContext(CartContext);
   if (context === undefined) {
