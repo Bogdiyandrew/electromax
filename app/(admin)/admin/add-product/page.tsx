@@ -13,11 +13,13 @@ interface ProductFormState {
   description: string;
   stock: string;
   category: string;
+  unit: string; // Câmp nou adăugat
 }
 
 const AddProductPage = () => {
   const router = useRouter();
-  const [formState, setFormState] = useState<ProductFormState>({ name: '', price: '', description: '', stock: '', category: '' });
+  // MODIFICARE: Am adăugat 'unit' la starea inițială
+  const [formState, setFormState] = useState<ProductFormState>({ name: '', price: '', description: '', stock: '', category: '', unit: 'buc' });
   const [imageFile, setImageFile] = useState<File | null>(null);
   const [isLoading, setIsLoading] = useState(false);
   const [error, setError] = useState<string | null>(null);
@@ -53,6 +55,7 @@ const AddProductPage = () => {
         description: formState.description,
         stock: parseInt(formState.stock, 10),
         category: formState.category,
+        unit: formState.unit, // Am adăugat unitatea de măsură
         imageUrl: downloadURL,
         createdAt: new Date(),
       };
@@ -60,10 +63,9 @@ const AddProductPage = () => {
       await addDoc(collection(db, "products"), newProduct);
       
       alert('Produsul a fost adăugat cu succes!');
-      router.push('/admin/dashboard');
+      router.push('/admin/products');
 
     } catch (err) {
-      // Corecție pentru a specifica tipul erorii
       const error = err as Error;
       setError(error.message || "A apărut o eroare la adăugarea produsului.");
       console.error("Eroare detaliată:", err);
@@ -84,8 +86,12 @@ const AddProductPage = () => {
           <h1 className="text-2xl font-bold text-gray-900 mb-6">Adaugă un Produs Nou</h1>
           <form onSubmit={handleSubmit} className="space-y-6">
             <input type="text" name="name" required placeholder="Nume Produs" value={formState.name} onChange={handleChange} className="mt-1 block w-full px-3 py-2 border border-gray-300 rounded-md shadow-sm focus:ring-indigo-500 focus:border-indigo-500 text-gray-900"/>
-            <input type="text" name="price" required placeholder="Preț" value={formState.price} onChange={handleChange} className="mt-1 block w-full px-3 py-2 border border-gray-300 rounded-md shadow-sm focus:ring-indigo-500 focus:border-indigo-500 text-gray-900"/>
-            <input type="number" name="stock" required placeholder="Stoc" value={formState.stock} onChange={handleChange} className="mt-1 block w-full px-3 py-2 border border-gray-300 rounded-md shadow-sm focus:ring-indigo-500 focus:border-indigo-500 text-gray-900"/>
+            <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
+                <input type="number" step="0.01" name="price" required placeholder="Preț" value={formState.price} onChange={handleChange} className="md:col-span-1 mt-1 block w-full px-3 py-2 border border-gray-300 rounded-md shadow-sm focus:ring-indigo-500 focus:border-indigo-500 text-gray-900"/>
+                <input type="number" name="stock" required placeholder="Stoc" value={formState.stock} onChange={handleChange} className="md:col-span-1 mt-1 block w-full px-3 py-2 border border-gray-300 rounded-md shadow-sm focus:ring-indigo-500 focus:border-indigo-500 text-gray-900"/>
+                {/* MODIFICARE: Câmp nou pentru unitatea de măsură */}
+                <input type="text" name="unit" required placeholder="Unitate (ex: buc, ml, set)" value={formState.unit} onChange={handleChange} className="md:col-span-1 mt-1 block w-full px-3 py-2 border border-gray-300 rounded-md shadow-sm focus:ring-indigo-500 focus:border-indigo-500 text-gray-900"/>
+            </div>
             <input type="text" name="category" required placeholder="Categorie" value={formState.category} onChange={handleChange} className="mt-1 block w-full px-3 py-2 border border-gray-300 rounded-md shadow-sm focus:ring-indigo-500 focus:border-indigo-500 text-gray-900"/>
             <textarea name="description" rows={4} required placeholder="Descriere" value={formState.description} onChange={handleChange} className="mt-1 block w-full px-3 py-2 border border-gray-300 rounded-md shadow-sm focus:ring-indigo-500 focus:border-indigo-500 text-gray-900"></textarea>
             <div>

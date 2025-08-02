@@ -13,7 +13,8 @@ export interface CartItem {
 // Definim ce va conține contextul nostru
 interface CartContextType {
   cartItems: CartItem[];
-  addToCart: (product: { id: string; name: string; price: number }) => void;
+  // MODIFICARE: Funcția acceptă acum și o cantitate
+  addToCart: (product: { id: string; name: string; price: number }, quantity: number) => void;
   removeFromCart: (itemId: string) => void;
   updateItemQuantity: (itemId: string, newQuantity: number) => void;
   clearCart: () => void;
@@ -24,7 +25,6 @@ const CartContext = createContext<CartContextType | undefined>(undefined);
 
 // Creăm Provider-ul, componenta care va ține logica
 export const CartProvider = ({ children }: { children: ReactNode }) => {
-  // Încercăm să încărcăm coșul din localStorage la pornire
   const [cartItems, setCartItems] = useState<CartItem[]>(() => {
     if (typeof window !== 'undefined') {
       const savedCart = localStorage.getItem('cart');
@@ -33,23 +33,25 @@ export const CartProvider = ({ children }: { children: ReactNode }) => {
     return [];
   });
 
-  // Salvăm coșul în localStorage de fiecare dată când se modifică
   useEffect(() => {
     localStorage.setItem('cart', JSON.stringify(cartItems));
   }, [cartItems]);
 
-  const addToCart = (product: { id: string; name: string; price: number }) => {
+  // MODIFICARE: addToCart acceptă acum și parametrul 'quantity'
+  const addToCart = (product: { id: string; name: string; price: number }, quantity: number) => {
     setCartItems(prevItems => {
       const existingItem = prevItems.find(item => item.id === product.id);
       if (existingItem) {
+        // Dacă produsul există, adăugăm noua cantitate la cea existentă
         return prevItems.map(item =>
-          item.id === product.id ? { ...item, quantity: item.quantity + 1 } : item
+          item.id === product.id ? { ...item, quantity: item.quantity + quantity } : item
         );
       } else {
-        return [...prevItems, { ...product, quantity: 1 }];
+        // Dacă produsul nu există, îl adăugăm cu cantitatea specificată
+        return [...prevItems, { ...product, quantity }];
       }
     });
-    alert(`"${product.name}" a fost adăugat în coș!`);
+    alert(`"${product.name}" (x${quantity}) a fost adăugat în coș!`);
   };
 
   const removeFromCart = (itemId: string) => {
@@ -57,7 +59,7 @@ export const CartProvider = ({ children }: { children: ReactNode }) => {
   };
 
   const updateItemQuantity = (itemId: string, newQuantity: number) => {
-    if (newQuantity < 1) return; // Cantitatea nu poate fi mai mică de 1
+    if (newQuantity < 1) return;
     setCartItems(prevItems =>
       prevItems.map(item =>
         item.id === itemId ? { ...item, quantity: newQuantity } : item
