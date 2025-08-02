@@ -3,9 +3,8 @@
 :root {
   --background: #ffffff;
   --foreground: #171717;
-}
 
-@theme inline {
+  /* MODIFICARE: Am mutat regulile de la @theme aici */
   --color-background: var(--background);
   --color-foreground: var(--foreground);
   --font-sans: var(--font-geist-sans);
@@ -23,4 +22,17 @@ body {
   background: var(--background);
   color: var(--foreground);
   font-family: Arial, Helvetica, sans-serif;
+}
+
+/* Ascunde săgețile de la input[type=number] pentru Chrome, Safari, Edge */
+input[type='number']::-webkit-outer-spin-button,
+input[type='number']::-webkit-inner-spin-button {
+  -webkit-appearance: none;
+  margin: 0;
+}
+
+/* Ascunde săgețile de la input[type=number] pentru Firefox */
+input[type='number'] {
+  -moz-appearance: textfield;
+  appearance: textfield; /* MODIFICARE: Am adăugat proprietatea standard */
 }
