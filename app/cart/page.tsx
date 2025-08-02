@@ -3,7 +3,7 @@
 import Link from 'next/link';
 import { useCart } from '@/context/CartContext';
 import { Trash2, Plus, Minus } from 'lucide-react';
-import { useState, useEffect } from 'react';
+import { useState, useEffect, ChangeEvent } from 'react'; // Am adăugat ChangeEvent
 import { doc, getDoc } from 'firebase/firestore';
 import { db } from '@/firebase/config';
 
@@ -51,6 +51,26 @@ const CartPage = () => {
     
     fetchStockInfo();
   }, [cartItems]);
+  
+  // #################################################################
+  // ## Funcție nouă pentru a gestiona input-ul manual             ##
+  // #################################################################
+  const handleQuantityChange = (itemId: string, e: ChangeEvent<HTMLInputElement>) => {
+      let value = parseInt(e.target.value, 10);
+      const productStockInfo = stockInfo[itemId] ?? { stock: 0, isUnlimited: false };
+
+      if (isNaN(value) || value < 1) {
+          // Dacă valoarea nu e validă, nu facem nimic (sau am putea reseta la 1)
+          return;
+      }
+      
+      // Validăm stocul
+      if (!productStockInfo.isUnlimited && value > productStockInfo.stock) {
+          value = productStockInfo.stock; // Setăm la valoarea maximă a stocului
+      }
+
+      updateItemQuantity(itemId, value);
+  };
 
 
   const subtotal = cartItems.reduce((sum, item) => sum + item.price * item.quantity, 0);
@@ -97,7 +117,15 @@ const CartPage = () => {
                           <button onClick={() => updateItemQuantity(item.id, item.quantity - 1)} className="px-2 py-1 text-gray-600 hover:bg-gray-100 rounded-l-md" disabled={item.quantity <= 1}>
                             <Minus size={16} />
                           </button>
-                          <span className="px-4 py-1 text-gray-900 font-semibold">{item.quantity}</span>
+                          {/* ############################################################# */}
+                          {/* ## MODIFICARE: Am înlocuit span cu input                   ## */}
+                          {/* ############################################################# */}
+                          <input 
+                            type="number"
+                            value={item.quantity}
+                            onChange={(e) => handleQuantityChange(item.id, e)}
+                            className="w-12 text-center border-l border-r text-gray-900 font-semibold focus:outline-none"
+                           />
                           <button 
                             onClick={() => updateItemQuantity(item.id, item.quantity + 1)} 
                             className="px-2 py-1 text-gray-600 hover:bg-gray-100 rounded-r-md" 
