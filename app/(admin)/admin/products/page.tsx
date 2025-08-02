@@ -15,7 +15,7 @@ interface Product {
   category: string;
   stock: number;
   imageUrl?: string;
-  unit?: string; // Am adăugat și unitatea aici
+  unit?: string;
 }
 
 const AdminProductsPage = () => {
@@ -23,27 +23,26 @@ const AdminProductsPage = () => {
   const [isLoading, setIsLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
 
-  const fetchProducts = async () => {
-    setIsLoading(true);
-    try {
-      const productsQuery = query(collection(db, "products"), orderBy("createdAt", "desc"));
-      const querySnapshot = await getDocs(productsQuery);
-      
-      const fetchedProducts = querySnapshot.docs.map(doc => ({
-        id: doc.id,
-        ...doc.data(),
-      })) as Product[];
-      
-      setProducts(fetchedProducts);
-    } catch (err) {
-      console.error("Eroare la preluarea produselor: ", err);
-      setError("Nu s-au putut încărca produsele.");
-    } finally {
-      setIsLoading(false);
-    }
-  };
-
   useEffect(() => {
+    const fetchProducts = async () => {
+      setIsLoading(true);
+      try {
+        const productsQuery = query(collection(db, "products"), orderBy("createdAt", "desc"));
+        const querySnapshot = await getDocs(productsQuery);
+        
+        const fetchedProducts = querySnapshot.docs.map(doc => ({
+          id: doc.id,
+          ...doc.data(),
+        })) as Product[];
+        
+        setProducts(fetchedProducts);
+      } catch (err) {
+        console.error("Eroare la preluarea produselor: ", err);
+        setError("Nu s-au putut încărca produsele.");
+      } finally {
+        setIsLoading(false);
+      }
+    };
     fetchProducts();
   }, []);
 
@@ -57,11 +56,15 @@ const AdminProductsPage = () => {
         try {
           const imageRef = ref(storage, imageUrl);
           await deleteObject(imageRef);
-        } catch (storageError: any) {
+        } catch (err) {
+          // #################################################################
+          // ## CORECȚIE AICI: Am specificat tipul erorii în loc de 'any'   ##
+          // #################################################################
+          const storageError = err as { code?: string };
           if (storageError.code === 'storage/object-not-found') {
             console.warn(`Imaginea la URL-ul ${imageUrl} nu a fost găsită în Storage, dar se continuă cu ștergerea produsului.`);
           } else {
-            throw storageError;
+            throw err;
           }
         }
       }
@@ -130,9 +133,6 @@ const AdminProductsPage = () => {
                         {product.price.toFixed(2)} RON
                       </td>
                        <td className="px-6 py-4 whitespace-nowrap text-sm text-gray-500">
-                        {/* ################################################# */}
-                        {/* ## CORECȚIE AICI: Afișăm unitatea dinamic       ## */}
-                        {/* ################################################# */}
                         {product.stock} {product.unit || 'buc.'}
                       </td>
                       <td className="px-6 py-4 whitespace-nowrap text-right text-sm font-medium">
