@@ -11,6 +11,7 @@ interface Product {
   category: string;
   stock: number;
   imageUrl?: string;
+  unit?: string; // MODIFICARE: Am adăugat câmpul 'unit'
 }
 
 async function getProduct(id: string): Promise<Product | null> {
@@ -29,10 +30,10 @@ async function getProduct(id: string): Promise<Product | null> {
     category: data.category,
     stock: data.stock,
     imageUrl: data.imageUrl || '',
+    unit: data.unit || 'buc.', // MODIFICARE: Preluăm câmpul 'unit' din baza de date
   };
 }
 
-// 👇 SCRIE TIPUL INLINE AICI — fără PageProps extern
 // eslint-disable-next-line @typescript-eslint/no-explicit-any
 export default async function ProductPage({ params }: any) {
   const product = await getProduct(params.id);

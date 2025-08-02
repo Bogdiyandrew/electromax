@@ -6,7 +6,6 @@ import Image from 'next/image';
 import { useCart } from '@/context/CartContext';
 import { Minus, Plus } from 'lucide-react';
 
-// Definim o interfață pentru structura unui produs
 interface Product {
   id: string;
   name: string;
@@ -18,7 +17,6 @@ interface Product {
   unit?: string;
 }
 
-// Componenta primește produsul ca proprietate (props)
 export default function ProductClientPage({ product }: { product: Product }) {
   const { addToCart } = useCart();
   const [quantity, setQuantity] = useState(1);
@@ -94,9 +92,6 @@ export default function ProductClientPage({ product }: { product: Product }) {
 
             <div>
               <p className="text-sm text-gray-500">
-                {/* ################################################# */}
-                {/* ## CORECȚIE AICI: Afișăm unitatea dinamic       ## */}
-                {/* ################################################# */}
                 Stoc: <span className="font-medium text-green-600">{product.stock > 0 ? `${product.stock} ${product.unit || 'buc.'} disponibile` : 'Stoc epuizat'}</span>
               </p>
             </div>
