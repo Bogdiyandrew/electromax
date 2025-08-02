@@ -55,7 +55,6 @@ const CheckoutForm = ({ clientSecret }: { clientSecret: string }) => {
       setIsLoading(false);
     } else {
       try {
-        // Pasul 1: Salvează comanda în Firestore
         const newOrderRef: DocumentReference = await addDoc(collection(db, 'orders'), {
           shippingInfo,
           cartItems,
@@ -64,21 +63,27 @@ const CheckoutForm = ({ clientSecret }: { clientSecret: string }) => {
           status: 'pending',
         });
         
-        // #################################################################
-        // ## MODIFICARE: Trimitem cererea către API-ul de email          ##
-        // #################################################################
-        // Pasul 2: Trimite email-ul de confirmare (nu așteptăm răspunsul)
+        // Trimitem email-ul de confirmare
         fetch('/api/send-confirmation-email', {
           method: 'POST',
           headers: { 'Content-Type': 'application/json' },
-          body: JSON.stringify({ orderId: newOrderRef.id }), // Trimitem ID-ul comenzii noi
+          body: JSON.stringify({ orderId: newOrderRef.id }),
         }).catch(emailError => {
-            // Chiar dacă email-ul eșuează, nu oprim clientul.
-            // Putem loga eroarea pentru a o investiga mai târziu.
             console.error("Trimiterea email-ului de confirmare a eșuat:", emailError);
         });
         
-        // Pasul 3: Curăță coșul și redirecționează
+        // #################################################################
+        // ## MODIFICARE: Apelăm API-ul pentru a actualiza stocul         ##
+        // #################################################################
+        fetch('/api/update-stock', {
+            method: 'POST',
+            headers: { 'Content-Type': 'application/json' },
+            body: JSON.stringify({ orderId: newOrderRef.id }),
+        }).catch(stockError => {
+            // Logăm eroarea pentru investigații, dar nu blocăm utilizatorul
+            console.error("Actualizarea stocului a eșuat:", stockError);
+        });
+        
         clearCart();
         router.push('/order-confirmation');
 
