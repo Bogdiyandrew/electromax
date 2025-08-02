@@ -1,6 +1,6 @@
 'use client';
 
-import { useState } from 'react';
+import { useState, ChangeEvent } from 'react'; // Am adăugat ChangeEvent
 import Link from 'next/link';
 import Image from 'next/image';
 import { useCart } from '@/context/CartContext';
@@ -28,11 +28,27 @@ export default function ProductClientPage({ product }: { product: Product }) {
         id: product.id,
         name: product.name,
         price: product.price,
-        stock: product.isUnlimited ? Infinity : product.stock, // Trimitem stocul corect
-        isUnlimited: product.isUnlimited, // Trimitem și starea
+        stock: product.isUnlimited ? Infinity : product.stock,
+        isUnlimited: product.isUnlimited,
       },
       quantity
     );
+  };
+
+  const handleQuantityChange = (e: ChangeEvent<HTMLInputElement>) => {
+    let value = parseInt(e.target.value, 10);
+    
+    // Validare: dacă valoarea nu este un număr sau este mai mică de 1, setăm la 1
+    if (isNaN(value) || value < 1) {
+      value = 1;
+    }
+    
+    // Validare: dacă stocul nu este nelimitat și valoarea depășește stocul, setăm la valoarea maximă a stocului
+    if (!product.isUnlimited && value > product.stock) {
+      value = product.stock;
+    }
+
+    setQuantity(value);
   };
 
   const increaseQuantity = () => {
@@ -103,11 +119,21 @@ export default function ProductClientPage({ product }: { product: Product }) {
                     <button onClick={decreaseQuantity} className="px-3 py-2 text-gray-600 hover:bg-gray-100 rounded-l-md" disabled={quantity <= 1}>
                         <Minus size={16} />
                     </button>
-                    <span className="px-5 py-2 text-gray-900 font-semibold">{quantity}</span>
+                    {/* ################################################# */}
+                    {/* ## MODIFICARE AICI                             ## */}
+                    {/* ################################################# */}
+                    <input 
+                        type="number"
+                        value={quantity}
+                        onChange={handleQuantityChange}
+                        className="w-16 text-center border-l border-r text-gray-900 font-semibold focus:outline-none"
+                    />
                     <button onClick={increaseQuantity} className="px-3 py-2 text-gray-600 hover:bg-gray-100 rounded-r-md" disabled={!product.isUnlimited && quantity >= product.stock}>
                         <Plus size={16} />
                     </button>
                 </div>
+                {/* Afișăm unitatea de măsură */}
+                <span className="text-gray-600 font-medium">{product.unit || 'buc.'}</span>
                 <button
                 type="button"
                 onClick={handleAddToCart}
