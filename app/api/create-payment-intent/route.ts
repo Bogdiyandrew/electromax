@@ -16,6 +16,10 @@ export async function POST(req: Request) {
   try {
     const { cartItems } = await req.json() as { cartItems: CartItem[] };
 
+    if (!cartItems || !Array.isArray(cartItems) || cartItems.length === 0) {
+      return NextResponse.json({ error: 'Coșul este gol sau datele sunt invalide.' }, { status: 400 });
+    }
+
     // Calculăm totalul pe server pentru a preveni manipularea prețului de către client
     const total = cartItems.reduce((sum, item) => sum + item.price * item.quantity, 0);
     const amountInCents = Math.round(total * 100); // Stripe lucrează cu subdiviziuni (cenți)
