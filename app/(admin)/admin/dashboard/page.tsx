@@ -8,9 +8,11 @@ import { collection, getDocs, query, orderBy, Timestamp } from 'firebase/firesto
 import { auth, db } from '@/firebase/config';
 import { ShoppingCart, Package, DollarSign } from 'lucide-react';
 
-// ✅ PASUL 1: Importă componenta nou creată
+// Importăm componentele adiționale
 import VerifyEmailNotice from '@/components/VerifyEmailNotice';
+import SmsTest from '@/components/SmsTest';
 
+// Definim interfața pentru Comenzi
 interface Order {
   id: string;
   total: number;
@@ -94,8 +96,11 @@ const AdminDashboard = () => {
       <main className="py-10">
         <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
           
-          {/* ✅ PASUL 2: Adaugă componenta aici */}
+          {/* Componenta de notificare pentru verificarea emailului */}
           <VerifyEmailNotice />
+
+          {/* Componenta de test pentru trimiterea SMS */}
+          <SmsTest />
 
           <div className="pb-8 border-b border-gray-200">
             <h2 className="text-2xl font-semibold text-gray-900">Bun venit în Panoul de Administrare!</h2>
