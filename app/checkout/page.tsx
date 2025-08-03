@@ -9,12 +9,10 @@ import { db } from '@/firebase/config';
 import { collection, addDoc } from 'firebase/firestore';
 import { useRouter } from 'next/navigation';
 
-// Pasul 1: Încarcă Stripe. Asigură-te că ai cheia publică în fișierul .env.local
-// Exemplu .env.local: NEXT_PUBLIC_STRIPE_PUBLISHABLE_KEY=pk_test_...
+// Încarcă Stripe. Cheia publică ar trebui să fie într-un fișier .env.local
 const stripePromise = loadStripe(process.env.NEXT_PUBLIC_STRIPE_PUBLISHABLE_KEY!);
 
-// Pasul 2: Creăm componenta care conține formularul. 
-// Aceasta va fi redată în interiorul provider-ului <Elements>.
+// Componenta internă care conține formularul și care va fi "îmbrăcată" de <Elements>
 const CheckoutForm = () => {
   const stripe = useStripe();
   const elements = useElements();
@@ -48,50 +46,29 @@ const CheckoutForm = () => {
     }
     setIsLoading(true);
 
-    const { error: submitError } = await elements.submit();
-    if (submitError) {
-      setErrorMessage(submitError.message || 'A apărut o eroare la validarea datelor.');
-      setIsLoading(false);
-      return;
-    }
+    // Salvăm datele comenzii în browser înainte de a iniția plata
+    const pendingOrderData = {
+      userId: user ? user.uid : null,
+      shippingInfo,
+      cartItems,
+      total: totalAmount,
+      createdAt: new Date().toISOString(),
+    };
+    localStorage.setItem('pendingOrder', JSON.stringify(pendingOrderData));
 
-    const { error, paymentIntent } = await stripe.confirmPayment({
+    const { error } = await stripe.confirmPayment({
       elements,
       confirmParams: {
         return_url: `${window.location.origin}/order-confirmation`,
-        receipt_email: shippingInfo.email,
       },
-      redirect: 'if_required',
     });
 
     if (error) {
       setErrorMessage(error.message || 'A apărut o eroare la plată.');
-      setIsLoading(false);
-    } else if (paymentIntent && paymentIntent.status === 'succeeded') {
-      try {
-        const orderData = {
-          userId: user ? user.uid : null,
-          shippingInfo,
-          cartItems,
-          total: totalAmount,
-          paymentIntentId: paymentIntent.id,
-          paymentStatus: paymentIntent.status,
-          createdAt: new Date(),
-        };
-
-        await addDoc(collection(db, 'orders'), orderData);
-        
-        clearCart();
-        router.push(`/order-confirmation?payment_intent=${paymentIntent.id}`);
-      } catch (dbError) {
-        console.error("Eroare la salvarea comenzii:", dbError);
-        setErrorMessage("Plata a fost procesată, dar a apărut o eroare la salvarea comenzii.");
-        setIsLoading(false);
-      }
-    } else {
-       setErrorMessage("Plata nu a putut fi procesată.");
-       setIsLoading(false);
+      localStorage.removeItem('pendingOrder');
     }
+    
+    setIsLoading(false);
   };
 
   return (
@@ -147,8 +124,7 @@ const CheckoutForm = () => {
   );
 };
 
-
-// Pasul 3: Componenta principală care încarcă datele și oferă contextul Elements
+// Componenta principală care încarcă datele și oferă contextul Elements
 const CheckoutPage = () => {
   const [clientSecret, setClientSecret] = useState<string>('');
   const { cartItems } = useCart();
@@ -159,7 +135,7 @@ const CheckoutPage = () => {
       fetch('/api/create-payment-intent', {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({ amount: totalAmount * 100, cartItems }), // Trimit și cartItems
+        body: JSON.stringify({ amount: totalAmount * 100 }),
       })
         .then((res) => res.json())
         .then((data) => setClientSecret(data.clientSecret));
@@ -174,13 +150,13 @@ const CheckoutPage = () => {
   return (
     <div className="container mx-auto px-4 py-8">
       <h1 className="text-3xl font-bold mb-6">Finalizare Comandă</h1>
-      {clientSecret && (
+      {clientSecret ? (
         <Elements stripe={stripePromise} options={options}>
           <CheckoutForm />
         </Elements>
+      ) : (
+        cartItems.length > 0 ? <p>Se încarcă formularul de plată...</p> : <p>Coșul tău este gol.</p>
       )}
-      {!clientSecret && cartItems.length > 0 && <p>Se încarcă formularul de plată...</p>}
-      {cartItems.length === 0 && <p>Coșul tău este gol.</p>}
     </div>
   );
 };
