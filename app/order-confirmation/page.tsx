@@ -3,8 +3,6 @@
 import { useEffect, useState, Suspense } from 'react';
 import { useSearchParams } from 'next/navigation';
 import { useCart } from '@/context/CartContext';
-import { db } from '@/firebase/config';
-import { collection, addDoc, query, where, getDocs } from 'firebase/firestore';
 import Link from 'next/link';
 
 // Componenta internă care conține logica principală
@@ -12,75 +10,53 @@ const OrderConfirmationContent = () => {
   const searchParams = useSearchParams();
   const { clearCart } = useCart();
 
-  const [status, setStatus] = useState('processing');
+  const [status, setStatus] = useState('processing'); // Stări posibile: 'processing', 'succeeded', 'failed'
   const [error, setError] = useState<string | null>(null);
   const [orderId, setOrderId] = useState<string | null>(null);
 
   useEffect(() => {
     const paymentIntentId = searchParams.get('payment_intent');
-    const pendingOrderJSON = localStorage.getItem('pendingOrder');
 
-    if (!paymentIntentId || !pendingOrderJSON) {
-      setError('Datele comenzii nu au fost găsite. Este posibil să fi reîmprospătat pagina.');
+    if (!paymentIntentId) {
       setStatus('failed');
+      setError('ID-ul plății lipsește. Tranzacția nu poate fi confirmată.');
       return;
     }
 
-    const saveOrder = async () => {
+    const finalizeOrder = async () => {
       try {
-        // Verificăm dacă o comandă cu acest ID de plată a fost deja salvată
-        const ordersRef = collection(db, 'orders');
-        const q = query(ordersRef, where('paymentIntentId', '==', paymentIntentId));
-        const querySnapshot = await getDocs(q);
-
-        if (!querySnapshot.empty) {
-          console.log("Comanda a fost deja salvată.");
-          setOrderId(querySnapshot.docs[0].id);
-          setStatus('succeeded');
-          localStorage.removeItem('pendingOrder');
-          clearCart();
-          return;
-        }
-
-        // Dacă nu a fost salvată, o salvăm acum
-        const pendingOrder = JSON.parse(pendingOrderJSON);
-        const orderData = {
-          ...pendingOrder,
-          paymentIntentId: paymentIntentId,
-          paymentStatus: 'succeeded',
-          createdAt: new Date(pendingOrder.createdAt), // Convertim înapoi în obiect Date
-        };
-
-        const docRef = await addDoc(collection(db, 'orders'), orderData);
-        setOrderId(docRef.id);
-
-        // Trimitem emailul de confirmare
-        await fetch('/api/send-confirmation-email', {
+        // Apelăm noul API endpoint pentru a finaliza comanda pe server
+        const response = await fetch('/api/finalize-order', {
           method: 'POST',
           headers: { 'Content-Type': 'application/json' },
-          body: JSON.stringify({
-            orderDetails: { id: docRef.id, ...orderData },
-            userEmail: orderData.shippingInfo.email,
-          }),
+          body: JSON.stringify({ paymentIntentId }),
         });
 
-        // Curățăm datele temporare
-        localStorage.removeItem('pendingOrder');
-        clearCart();
-        setStatus('succeeded');
+        const data = await response.json();
 
-      } catch (err) {
+        if (!response.ok) {
+          // Dacă răspunsul de la API nu este "ok", aruncăm o eroare cu mesajul de la server
+          throw new Error(data.error || 'A apărut o eroare la finalizarea comenzii.');
+        }
+        
+        // Comanda a fost procesată și salvată cu succes pe server
+        setOrderId(data.orderId);
+        setStatus('succeeded');
+        clearCart(); // Golim coșul doar după ce totul a reușit
+
+      } catch (err: any) {
         console.error("Eroare la finalizarea comenzii:", err);
-        setError("A apărut o eroare la salvarea comenzii. Vă rugăm contactați suportul.");
+        setError(err.message || "A apărut o eroare la salvarea comenzii. Vă rugăm contactați suportul.");
         setStatus('failed');
       }
     };
 
-    saveOrder();
-  }, [searchParams, clearCart]);
+    finalizeOrder();
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, []); // Rulează o singură dată, la încărcarea paginii
 
   if (status === 'processing') {
-    return <p className="text-center text-lg">Se procesează comanda...</p>;
+    return <p className="text-center text-lg">Se finalizează comanda... Vă rugăm nu închideți fereastra.</p>;
   }
 
   if (status === 'failed') {
