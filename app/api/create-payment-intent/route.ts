@@ -33,9 +33,9 @@ export async function POST(req: Request) {
     return NextResponse.json({ clientSecret: paymentIntent.client_secret });
 
   } catch (error) {
-    // Specificăm tipul erorii pentru a fi compatibili cu Vercel
     const err = error as Error;
     console.error("Stripe API Error:", err.message);
-    return new NextResponse(err.message, { status: 500 });
+    // Returnează mereu JSON la eroare
+    return NextResponse.json({ error: err.message }, { status: 500 });
   }
 }
