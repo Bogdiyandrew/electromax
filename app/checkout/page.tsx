@@ -131,11 +131,11 @@ const CheckoutPage = () => {
   const totalAmount = cartItems.reduce((sum, item) => sum + item.price * item.quantity, 0);
 
   useEffect(() => {
-    if (totalAmount > 0) {
+    if (totalAmount > 0 && cartItems.length > 0) {
       fetch('/api/create-payment-intent', {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({ amount: totalAmount * 100 }),
+        body: JSON.stringify({ cartItems }), // Trimit cartItems corect
       })
         .then((res) => res.json())
         .then((data) => setClientSecret(data.clientSecret));
