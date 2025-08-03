@@ -1,254 +1,137 @@
 'use client';
 
-import { useState, FormEvent, useEffect } from 'react';
+import { useState, useEffect } from 'react';
 import { useRouter } from 'next/navigation';
-import {
-  signInWithEmailAndPassword,
-  getMultiFactorResolver,
-  PhoneAuthProvider,
-  PhoneMultiFactorGenerator,
-  MultiFactorResolver,
-  RecaptchaVerifier,
-  AuthError,
-  MultiFactorError,
-  PhoneMultiFactorInfo
+import { 
+  sendSignInLinkToEmail, 
+  isSignInWithEmailLink, 
+  signInWithEmailLink 
 } from 'firebase/auth';
 import { auth } from '@/firebase/config';
 
-type MfaStep = 'LOGIN' | 'ENROLL' | 'VERIFY';
+// Setările pentru acțiunea din email
+const actionCodeSettings = {
+  // IMPORTANT: Schimbă această adresă cu URL-ul tău real în producție
+  // Pentru testare locală, 'http://localhost:3000' este de obicei corect.
+  url: 'http://localhost:3000/admin/login', 
+  handleCodeInApp: true,
+};
 
-// Extindem tipul window pentru a include recaptchaVerifier
-declare global {
-  interface Window {
-    recaptchaVerifier?: RecaptchaVerifier;
-  }
-}
 
-const AdminLogin = () => {
+const AdminLoginEmailLink = () => {
   const [email, setEmail] = useState('');
-  const [password, setPassword] = useState('');
-  const [error, setError] = useState<string | null>(null);
   const [isLoading, setIsLoading] = useState(false);
+  const [error, setError] = useState<string | null>(null);
+  const [emailSent, setEmailSent] = useState(false);
   const router = useRouter();
 
-  const [mfaStep, setMfaStep] = useState<MfaStep>('LOGIN');
-  const [mfaResolver, setMfaResolver] = useState<MultiFactorResolver | null>(null);
-  const [verificationId, setVerificationId] = useState<string>('');
-  const [verificationCode, setVerificationCode] = useState('');
-  const [phoneNumber, setPhoneNumber] = useState('');
-  
+  // Pasul 2: Verifică dacă pagina este încărcată printr-un link de autentificare
   useEffect(() => {
-    // Inițializăm reCAPTCHA o singură dată
-    if (!window.recaptchaVerifier) {
-      console.log("Inițializare reCAPTCHA Verifier...");
-      window.recaptchaVerifier = new RecaptchaVerifier(auth, 'recaptcha-container', {
-        'size': 'invisible',
-        'callback': () => { 
-            console.log("reCAPTCHA rezolvat!");
-        }
-      });
-    }
-  }, []);
-
-  const handleLogin = async (e: FormEvent) => {
-    e.preventDefault();
-    setIsLoading(true);
-    setError(null);
-    console.log("Încercare de login pentru:", email);
-
-    try {
-      await signInWithEmailAndPassword(auth, email, password);
-      console.log("Login reușit! Redirecționare către dashboard...");
-      router.push('/admin/dashboard');
-    } catch (error) {
-      const authError = error as AuthError;
-      console.error("Eroare la login:", authError.code, authError.message);
-
-      if (authError.code === 'auth/multi-factor-auth-required') {
-        console.log("MFA este necesar. Se preia resolver-ul...");
-        const resolver = getMultiFactorResolver(auth, error as MultiFactorError);
-        setMfaResolver(resolver);
-
-        if (resolver.hints.some(hint => hint.factorId === PhoneMultiFactorGenerator.FACTOR_ID)) {
-            console.log("Utilizatorul are un număr de telefon înrolat. Se trece la pasul VERIFY.");
-            setMfaStep('VERIFY');
-            handleSendVerificationCode(resolver);
-        } else {
-            console.log("Utilizatorul NU are un număr de telefon înrolat. Se trece la pasul ENROLL.");
-            setMfaStep('ENROLL');
-        }
-      } else {
-        setError('Email sau parolă invalidă.');
+    // Confirmă dacă link-ul este unul valid de la Firebase.
+    if (isSignInWithEmailLink(auth, window.location.href)) {
+      setIsLoading(true);
+      // Preia emailul salvat local.
+      let savedEmail = window.localStorage.getItem('emailForSignIn');
+      if (!savedEmail) {
+        // Dacă utilizatorul deschide link-ul pe alt dispozitiv, cere emailul din nou pentru securitate.
+        savedEmail = window.prompt('Te rog introdu adresa de email pentru confirmare');
       }
-    } finally {
-      setIsLoading(false);
-    }
-  };
-  
-  const handleSendVerificationCode = async (resolver: MultiFactorResolver) => {
-    console.log("Se intră în funcția handleSendVerificationCode...");
-    try {
-        const phoneInfoOptions = resolver.hints.find(
-            (info) => info.factorId === PhoneMultiFactorGenerator.FACTOR_ID
-        ) as PhoneMultiFactorInfo;
-
-        console.log("Datele MFA preluate (hints):", phoneInfoOptions);
-        if (phoneInfoOptions) {
-          console.log("!!! NUMĂRUL DE TELEFON extras din Firebase:", `"${phoneInfoOptions.phoneNumber}"`);
-        }
-
-        if (!phoneInfoOptions) {
-            setError("Acest cont nu are un număr de telefon configurat pentru 2FA.");
-            return;
-        }
-        const phoneAuthProvider = new PhoneAuthProvider(auth);
-        const recaptchaVerifier = window.recaptchaVerifier;
-        if (!recaptchaVerifier) {
-            console.error("recaptchaVerifier nu este gata!");
-            setError("Eroare reCAPTCHA. Te rog reîmprospătează pagina.");
-            return;
-        }
-
-        console.log("Se trimite codul de verificare la numărul:", phoneInfoOptions.phoneNumber);
-        const newVerificationId = await phoneAuthProvider.verifyPhoneNumber(phoneInfoOptions, recaptchaVerifier);
-        
-        console.log("Codul de verificare a fost trimis. Verification ID:", newVerificationId);
-        setVerificationId(newVerificationId);
-    } catch (err) {
-        console.error("Eroare detaliată la trimiterea codului (MFA Verify Error):", err);
-        setError("Eroare la trimiterea codului SMS. Verifică consola pentru detalii.");
-    }
-  }
-
-  const handleEnroll = async (e: FormEvent) => {
-    e.preventDefault();
-    setIsLoading(true);
-    setError(null);
-    console.log("Începe procesul de înrolare pentru numărul:", phoneNumber);
-    
-    if (!mfaResolver) {
-        console.error("Eroare: mfaResolver este null în handleEnroll.");
-        setError("A apărut o eroare de sesiune. Te rog reia procesul de login.");
-        setIsLoading(false);
-        return;
-    }
-
-    try {
-      const phoneAuthProvider = new PhoneAuthProvider(auth);
-      const recaptchaVerifier = window.recaptchaVerifier as RecaptchaVerifier;
       
-      const sanitizedPhoneNumber = phoneNumber.replace(/\s/g, '');
-      console.log("Număr de telefon introdus:", `"${phoneNumber}"`);
-      console.log("Număr de telefon curățat (fără spații):", `"${sanitizedPhoneNumber}"`);
-
-      const newVerificationId = await phoneAuthProvider.verifyPhoneNumber({
-          phoneNumber: sanitizedPhoneNumber,
-          session: mfaResolver.session,
-      }, recaptchaVerifier);
-
-      console.log("Înrolare - Cod trimis. Verification ID:", newVerificationId);
-      setVerificationId(newVerificationId);
-      setMfaStep('VERIFY');
-    } catch (err) {
-      console.error("Eroare detaliată la înrolare:", err);
-      setError("Numărul de telefon este invalid sau a apărut o eroare. Verifică consola.");
-    } finally {
-      setIsLoading(false);
+      if (savedEmail) {
+        signInWithEmailLink(auth, savedEmail, window.location.href)
+          .then((result) => {
+            // Șterge emailul din stocarea locală.
+            window.localStorage.removeItem('emailForSignIn');
+            console.log("Autentificare reușită!", result.user);
+            router.push('/admin/dashboard');
+          })
+          .catch((err) => {
+            console.error(err);
+            setError('Link-ul este invalid sau a expirat. Te rog încearcă din nou.');
+            setIsLoading(false);
+          });
+      } else {
+        setIsLoading(false);
+      }
     }
-  };
+  }, [router]);
 
-  const handleVerify = async (e: FormEvent) => {
+  // Pasul 1: Trimite link-ul de autentificare
+  const handleLogin = async (e: React.FormEvent) => {
     e.preventDefault();
-    if (!mfaResolver) {
-        console.error("Eroare: mfaResolver este null în handleVerify.");
-        setError("A apărut o eroare de sesiune. Te rog reia procesul de login.");
-        return;
-    }
     setIsLoading(true);
     setError(null);
-    console.log("Se verifică codul:", verificationCode);
+    setEmailSent(false);
 
     try {
-      const cred = PhoneAuthProvider.credential(verificationId, verificationCode);
-      const multiFactorAssertion = PhoneMultiFactorGenerator.assertion(cred);
-      await mfaResolver.resolveSignIn(multiFactorAssertion);
-
-      console.log("Verificare MFA reușită! Redirecționare...");
-      router.push('/admin/dashboard');
+      await sendSignInLinkToEmail(auth, email, actionCodeSettings);
+      // Link-ul a fost trimis cu succes.
+      // Salvăm emailul local pentru a nu-l mai cere dacă utilizatorul deschide link-ul pe același dispozitiv.
+      window.localStorage.setItem('emailForSignIn', email);
+      setEmailSent(true);
+      console.log(`Link de login trimis la ${email}`);
     } catch (err) {
-      console.error("Eroare detaliată la verificare:", err);
-      setError("Codul de verificare este invalid sau a expirat.");
+      console.error(err);
+      setError('A apărut o eroare. Te rog verifică adresa de email și încearcă din nou.');
     } finally {
       setIsLoading(false);
     }
   };
 
-  const renderForm = () => {
-    switch (mfaStep) {
-        case 'ENROLL':
-          return (
-            <>
-              <h1 className="text-2xl font-bold text-center text-gray-900">Adaugă un număr de telefon</h1>
-              <p className="text-center text-gray-600">Pentru a-ți securiza contul, te rog adaugă un număr de telefon.</p>
-              <form onSubmit={handleEnroll} className="space-y-6">
-                <div>
-                  <label htmlFor="phone-number" className="text-sm font-medium text-gray-700">Număr de telefon (ex: +40722123456)</label>
-                  <input id="phone-number" name="phone-number" type="tel" required value={phoneNumber} onChange={(e) => setPhoneNumber(e.target.value)} className="w-full px-3 py-2 mt-1 border border-gray-300 rounded-md text-gray-900"/>
-                </div>
-                <button type="submit" disabled={isLoading} className="w-full px-4 py-2 font-medium text-white bg-indigo-600 rounded-md hover:bg-indigo-700">
-                  {isLoading ? 'Se trimite...' : 'Trimite codul de verificare'}
-                </button>
-              </form>
-            </>
-          );
-        case 'VERIFY':
-          return (
-            <>
-              <h1 className="text-2xl font-bold text-center text-gray-900">Verificare în 2 pași</h1>
-              <p className="text-center text-gray-600">Introduceți codul primit prin SMS.</p>
-              <form onSubmit={handleVerify} className="space-y-6">
-                <div>
-                  <label htmlFor="mfa-code" className="text-sm font-medium text-gray-700">Cod de verificare</label>
-                  <input id="mfa-code" name="mfa-code" type="text" required value={verificationCode} onChange={(e) => setVerificationCode(e.target.value)} className="w-full px-3 py-2 mt-1 border border-gray-300 rounded-md text-gray-900"/>
-                </div>
-                <button type="submit" disabled={isLoading} className="w-full px-4 py-2 font-medium text-white bg-indigo-600 rounded-md hover:bg-indigo-700">
-                  {isLoading ? 'Se verifică...' : 'Confirmă'}
-                </button>
-              </form>
-            </>
-          );
-        case 'LOGIN':
-        default:
-          return (
-            <>
-              <h1 className="text-2xl font-bold text-center text-gray-900">Admin Login</h1>
-              <form onSubmit={handleLogin} className="space-y-6">
-                <div>
-                  <label htmlFor="email" className="text-sm font-medium text-gray-700">Email</label>
-                  <input id="email" name="email" type="email" required value={email} onChange={(e) => setEmail(e.target.value)} className="w-full px-3 py-2 mt-1 border border-gray-300 rounded-md text-gray-900"/>
-                </div>
-                <div>
-                  <label htmlFor="password" className="text-sm font-medium text-gray-700">Parolă</label>
-                  <input id="password" name="password" type="password" required value={password} onChange={(e) => setPassword(e.target.value)} className="w-full px-3 py-2 mt-1 border border-gray-300 rounded-md text-gray-900"/>
-                </div>
-                <button type="submit" disabled={isLoading} className="w-full px-4 py-2 font-medium text-white bg-indigo-600 rounded-md hover:bg-indigo-700">
-                  {isLoading ? 'Se autentifică...' : 'Login'}
-                </button>
-              </form>
-            </>
-          );
-      }
-  };
+  // Afișează un mesaj de încărcare în timp ce se procesează link-ul
+  if (isLoading && isSignInWithEmailLink(auth, window.location.href)) {
+    return (
+      <div className="flex items-center justify-center min-h-screen bg-gray-100">
+        <div className="text-center">
+          <p className="text-lg font-semibold text-gray-700">Se verifică link-ul de autentificare...</p>
+        </div>
+      </div>
+    );
+  }
 
   return (
     <div className="flex items-center justify-center min-h-screen bg-gray-100">
       <div className="w-full max-w-md p-8 space-y-6 bg-white rounded-lg shadow-md">
-        {renderForm()}
+        {emailSent ? (
+          <div className="text-center">
+            <h1 className="text-2xl font-bold text-gray-900">Verifică-ți Emailul</h1>
+            <p className="mt-4 text-gray-600">
+              Am trimis un link de autentificare la adresa <strong>{email}</strong>.
+              Te rog accesează link-ul pentru a finaliza procesul de login.
+            </p>
+            <p className="mt-2 text-sm text-gray-500">(Poți închide această fereastră)</p>
+          </div>
+        ) : (
+          <>
+            <h1 className="text-2xl font-bold text-center text-gray-900">Admin Login</h1>
+            <p className="text-center text-gray-600">Introdu adresa de email pentru a primi un link de autentificare.</p>
+            <form onSubmit={handleLogin} className="space-y-6">
+              <div>
+                <label htmlFor="email" className="text-sm font-medium text-gray-700">Email</label>
+                <input 
+                  id="email" 
+                  name="email" 
+                  type="email" 
+                  required 
+                  value={email} 
+                  onChange={(e) => setEmail(e.target.value)} 
+                  className="w-full px-3 py-2 mt-1 border border-gray-300 rounded-md text-gray-900"
+                />
+              </div>
+              <button 
+                type="submit" 
+                disabled={isLoading} 
+                className="w-full px-4 py-2 font-medium text-white bg-indigo-600 rounded-md hover:bg-indigo-700"
+              >
+                {isLoading ? 'Se trimite...' : 'Trimite Link de Login'}
+              </button>
+            </form>
+          </>
+        )}
         {error && (<p className="text-sm text-center text-red-600 pt-4">{error}</p>)}
-        <div id="recaptcha-container"></div>
       </div>
     </div>
   );
 };
 
-export default AdminLogin;
+export default AdminLoginEmailLink;
