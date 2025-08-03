@@ -9,15 +9,6 @@ import {
 } from 'firebase/auth';
 import { auth } from '@/firebase/config';
 
-// Setările pentru acțiunea din email
-const actionCodeSettings = {
-  // IMPORTANT: Schimbă această adresă cu URL-ul tău real în producție
-  // Pentru testare locală, 'http://localhost:3000' este de obicei corect.
-  url: 'http://localhost:3000/admin/login', 
-  handleCodeInApp: true,
-};
-
-
 const AdminLoginEmailLink = () => {
   const [email, setEmail] = useState('');
   const [isLoading, setIsLoading] = useState(false);
@@ -27,20 +18,16 @@ const AdminLoginEmailLink = () => {
 
   // Pasul 2: Verifică dacă pagina este încărcată printr-un link de autentificare
   useEffect(() => {
-    // Confirmă dacă link-ul este unul valid de la Firebase.
     if (isSignInWithEmailLink(auth, window.location.href)) {
       setIsLoading(true);
-      // Preia emailul salvat local.
       let savedEmail = window.localStorage.getItem('emailForSignIn');
       if (!savedEmail) {
-        // Dacă utilizatorul deschide link-ul pe alt dispozitiv, cere emailul din nou pentru securitate.
         savedEmail = window.prompt('Te rog introdu adresa de email pentru confirmare');
       }
       
       if (savedEmail) {
         signInWithEmailLink(auth, savedEmail, window.location.href)
           .then((result) => {
-            // Șterge emailul din stocarea locală.
             window.localStorage.removeItem('emailForSignIn');
             console.log("Autentificare reușită!", result.user);
             router.push('/admin/dashboard');
@@ -63,10 +50,15 @@ const AdminLoginEmailLink = () => {
     setError(null);
     setEmailSent(false);
 
+    // ✅ CORECȚIA: Definim setările aici pentru a folosi URL-ul dinamic
+    const actionCodeSettings = {
+      // Acum va folosi URL-ul corect, fie el localhost sau electro-max.ro
+      url: window.location.href, 
+      handleCodeInApp: true,
+    };
+
     try {
       await sendSignInLinkToEmail(auth, email, actionCodeSettings);
-      // Link-ul a fost trimis cu succes.
-      // Salvăm emailul local pentru a nu-l mai cere dacă utilizatorul deschide link-ul pe același dispozitiv.
       window.localStorage.setItem('emailForSignIn', email);
       setEmailSent(true);
       console.log(`Link de login trimis la ${email}`);
@@ -78,7 +70,6 @@ const AdminLoginEmailLink = () => {
     }
   };
 
-  // Afișează un mesaj de încărcare în timp ce se procesează link-ul
   if (isLoading && isSignInWithEmailLink(auth, window.location.href)) {
     return (
       <div className="flex items-center justify-center min-h-screen bg-gray-100">
@@ -99,7 +90,6 @@ const AdminLoginEmailLink = () => {
               Am trimis un link de autentificare la adresa <strong>{email}</strong>.
               Te rog accesează link-ul pentru a finaliza procesul de login.
             </p>
-            <p className="mt-2 text-sm text-gray-500">(Poți închide această fereastră)</p>
           </div>
         ) : (
           <>
