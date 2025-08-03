@@ -17,6 +17,13 @@ import { auth } from '@/firebase/config';
 
 type MfaStep = 'LOGIN' | 'ENROLL' | 'VERIFY';
 
+// Extindem tipul window pentru a include recaptchaVerifier
+declare global {
+  interface Window {
+    recaptchaVerifier?: RecaptchaVerifier;
+  }
+}
+
 const AdminLogin = () => {
   const [email, setEmail] = useState('');
   const [password, setPassword] = useState('');
@@ -32,12 +39,13 @@ const AdminLogin = () => {
   
   useEffect(() => {
     // Inițializăm reCAPTCHA o singură dată
-    // eslint-disable-next-line @typescript-eslint/no-explicit-any
-    if (!(window as any).recaptchaVerifier) {
-      // eslint-disable-next-line @typescript-eslint/no-explicit-any
-      (window as any).recaptchaVerifier = new RecaptchaVerifier(auth, 'recaptcha-container', {
+    if (!window.recaptchaVerifier) {
+      console.log("Inițializare reCAPTCHA Verifier...");
+      window.recaptchaVerifier = new RecaptchaVerifier(auth, 'recaptcha-container', {
         'size': 'invisible',
-        'callback': () => { /* reCAPTCHA rezolvat */ }
+        'callback': () => { 
+            console.log("reCAPTCHA rezolvat!");
+        }
       });
     }
   }, []);
@@ -46,20 +54,27 @@ const AdminLogin = () => {
     e.preventDefault();
     setIsLoading(true);
     setError(null);
+    console.log("Încercare de login pentru:", email);
 
     try {
       await signInWithEmailAndPassword(auth, email, password);
+      console.log("Login reușit! Redirecționare către dashboard...");
       router.push('/admin/dashboard');
     } catch (error) {
       const authError = error as AuthError;
+      console.error("Eroare la login:", authError.code, authError.message);
+
       if (authError.code === 'auth/multi-factor-auth-required') {
+        console.log("MFA este necesar. Se preia resolver-ul...");
         const resolver = getMultiFactorResolver(auth, error as MultiFactorError);
         setMfaResolver(resolver);
 
         if (resolver.hints.some(hint => hint.factorId === PhoneMultiFactorGenerator.FACTOR_ID)) {
+            console.log("Utilizatorul are un număr de telefon înrolat. Se trece la pasul VERIFY.");
             setMfaStep('VERIFY');
             handleSendVerificationCode(resolver);
         } else {
+            console.log("Utilizatorul NU are un număr de telefon înrolat. Se trece la pasul ENROLL.");
             setMfaStep('ENROLL');
         }
       } else {
@@ -71,23 +86,37 @@ const AdminLogin = () => {
   };
   
   const handleSendVerificationCode = async (resolver: MultiFactorResolver) => {
+    console.log("Se intră în funcția handleSendVerificationCode...");
     try {
         const phoneInfoOptions = resolver.hints.find(
             (info) => info.factorId === PhoneMultiFactorGenerator.FACTOR_ID
         ) as PhoneMultiFactorInfo;
+
+        console.log("Datele MFA preluate (hints):", phoneInfoOptions);
+        if (phoneInfoOptions) {
+          console.log("!!! NUMĂRUL DE TELEFON extras din Firebase:", `"${phoneInfoOptions.phoneNumber}"`);
+        }
 
         if (!phoneInfoOptions) {
             setError("Acest cont nu are un număr de telefon configurat pentru 2FA.");
             return;
         }
         const phoneAuthProvider = new PhoneAuthProvider(auth);
-        // eslint-disable-next-line @typescript-eslint/no-explicit-any
-        const recaptchaVerifier = (window as any).recaptchaVerifier;
+        const recaptchaVerifier = window.recaptchaVerifier;
+        if (!recaptchaVerifier) {
+            console.error("recaptchaVerifier nu este gata!");
+            setError("Eroare reCAPTCHA. Te rog reîmprospătează pagina.");
+            return;
+        }
+
+        console.log("Se trimite codul de verificare la numărul:", phoneInfoOptions.phoneNumber);
         const newVerificationId = await phoneAuthProvider.verifyPhoneNumber(phoneInfoOptions, recaptchaVerifier);
+        
+        console.log("Codul de verificare a fost trimis. Verification ID:", newVerificationId);
         setVerificationId(newVerificationId);
     } catch (err) {
-        console.error("MFA Verify Error:", err);
-        setError("Eroare la trimiterea codului SMS. Reîmprospătează pagina și încearcă din nou.");
+        console.error("Eroare detaliată la trimiterea codului (MFA Verify Error):", err);
+        setError("Eroare la trimiterea codului SMS. Verifică consola pentru detalii.");
     }
   }
 
@@ -95,24 +124,34 @@ const AdminLogin = () => {
     e.preventDefault();
     setIsLoading(true);
     setError(null);
+    console.log("Începe procesul de înrolare pentru numărul:", phoneNumber);
     
-    if (!mfaResolver) return;
+    if (!mfaResolver) {
+        console.error("Eroare: mfaResolver este null în handleEnroll.");
+        setError("A apărut o eroare de sesiune. Te rog reia procesul de login.");
+        setIsLoading(false);
+        return;
+    }
 
     try {
       const phoneAuthProvider = new PhoneAuthProvider(auth);
-      // eslint-disable-next-line @typescript-eslint/no-explicit-any
-      const recaptchaVerifier = (window as any).recaptchaVerifier;
+      const recaptchaVerifier = window.recaptchaVerifier as RecaptchaVerifier;
+      
+      const sanitizedPhoneNumber = phoneNumber.replace(/\s/g, '');
+      console.log("Număr de telefon introdus:", `"${phoneNumber}"`);
+      console.log("Număr de telefon curățat (fără spații):", `"${sanitizedPhoneNumber}"`);
 
       const newVerificationId = await phoneAuthProvider.verifyPhoneNumber({
-          phoneNumber: phoneNumber,
+          phoneNumber: sanitizedPhoneNumber,
           session: mfaResolver.session,
       }, recaptchaVerifier);
 
+      console.log("Înrolare - Cod trimis. Verification ID:", newVerificationId);
       setVerificationId(newVerificationId);
       setMfaStep('VERIFY');
     } catch (err) {
-      console.error(err);
-      setError("Numărul de telefon este invalid sau a apărut o eroare.");
+      console.error("Eroare detaliată la înrolare:", err);
+      setError("Numărul de telefon este invalid sau a apărut o eroare. Verifică consola.");
     } finally {
       setIsLoading(false);
     }
@@ -120,17 +159,24 @@ const AdminLogin = () => {
 
   const handleVerify = async (e: FormEvent) => {
     e.preventDefault();
-    if (!mfaResolver) return;
+    if (!mfaResolver) {
+        console.error("Eroare: mfaResolver este null în handleVerify.");
+        setError("A apărut o eroare de sesiune. Te rog reia procesul de login.");
+        return;
+    }
     setIsLoading(true);
     setError(null);
+    console.log("Se verifică codul:", verificationCode);
 
     try {
       const cred = PhoneAuthProvider.credential(verificationId, verificationCode);
       const multiFactorAssertion = PhoneMultiFactorGenerator.assertion(cred);
       await mfaResolver.resolveSignIn(multiFactorAssertion);
+
+      console.log("Verificare MFA reușită! Redirecționare...");
       router.push('/admin/dashboard');
     } catch (err) {
-      console.error(err);
+      console.error("Eroare detaliată la verificare:", err);
       setError("Codul de verificare este invalid sau a expirat.");
     } finally {
       setIsLoading(false);
