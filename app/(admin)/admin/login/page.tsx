@@ -32,7 +32,9 @@ const AdminLogin = () => {
   
   useEffect(() => {
     // Inițializăm reCAPTCHA o singură dată
+    // eslint-disable-next-line @typescript-eslint/no-explicit-any
     if (!(window as any).recaptchaVerifier) {
+      // eslint-disable-next-line @typescript-eslint/no-explicit-any
       (window as any).recaptchaVerifier = new RecaptchaVerifier(auth, 'recaptcha-container', {
         'size': 'invisible',
         'callback': () => { /* reCAPTCHA rezolvat */ }
@@ -79,7 +81,7 @@ const AdminLogin = () => {
             return;
         }
         const phoneAuthProvider = new PhoneAuthProvider(auth);
-        const recaptchaVerifier = (window as any).recaptchaVerifier;
+        const recaptchaVerifier = (window as any).recaptchaVerifier; // eslint-disable-next-line @typescript-eslint/no-explicit-any
         const newVerificationId = await phoneAuthProvider.verifyPhoneNumber(phoneInfoOptions, recaptchaVerifier);
         setVerificationId(newVerificationId);
     } catch (err) {
@@ -97,7 +99,7 @@ const AdminLogin = () => {
 
     try {
       const phoneAuthProvider = new PhoneAuthProvider(auth);
-      const recaptchaVerifier = (window as any).recaptchaVerifier;
+      const recaptchaVerifier = (window as any).recaptchaVerifier; // eslint-disable-next-line @typescript-eslint/no-explicit-any
 
       const newVerificationId = await phoneAuthProvider.verifyPhoneNumber({
           phoneNumber: phoneNumber,
