@@ -6,18 +6,17 @@ import Link from 'next/link';
 import { signOut } from 'firebase/auth';
 import { collection, getDocs, query, orderBy, Timestamp } from 'firebase/firestore';
 import { auth, db } from '@/firebase/config';
-// MODIFICARE: Am șters 'ListOrdered' care nu era folosit
 import { ShoppingCart, Package, DollarSign } from 'lucide-react';
 
-// Definim interfața doar pentru Comenzi, deoarece doar pe ea o folosim
+// ✅ PASUL 1: Importă componenta nou creată
+import VerifyEmailNotice from '@/components/VerifyEmailNotice';
+
 interface Order {
   id: string;
   total: number;
   shippingInfo: { name: string };
   createdAt: Timestamp;
 }
-
-// MODIFICARE: Am șters interfața 'Product' care nu era folosită
 
 const StatCard = ({ title, value, icon, color }: { title: string; value: string | number; icon: React.ReactNode; color: string }) => (
   <div className="bg-white p-6 rounded-lg shadow-md flex items-center">
@@ -94,6 +93,10 @@ const AdminDashboard = () => {
 
       <main className="py-10">
         <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
+          
+          {/* ✅ PASUL 2: Adaugă componenta aici */}
+          <VerifyEmailNotice />
+
           <div className="pb-8 border-b border-gray-200">
             <h2 className="text-2xl font-semibold text-gray-900">Bun venit în Panoul de Administrare!</h2>
             <p className="mt-2 text-gray-600">
