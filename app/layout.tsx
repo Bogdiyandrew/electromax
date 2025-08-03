@@ -1,7 +1,7 @@
 import type { Metadata } from "next";
 import { Inter } from "next/font/google";
 import "./globals.css";
-import { AuthProvider } from "@/context/AuthContext"; // Importăm AuthProvider
+import { AuthProvider } from "@/app/context/AuthContext"; // Corect: calea include 'app/'
 import { CartProvider } from "@/context/CartContext"; // Importăm CartProvider
 import Header from "@/components/Header"; // Asigură-te că ai un component Header
 

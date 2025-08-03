@@ -3,14 +3,15 @@
 import Link from 'next/link';
 import { ShoppingCart } from 'lucide-react';
 import { useCart } from '@/context/CartContext';
-import { useAuth } from '@/context/AuthContext'; // 1. Importăm contextul de autentificare
+// ✅ CORECȚIE: Am ajustat calea de import pentru a include folderul 'app'
+import { useAuth } from '@/app/context/AuthContext'; 
 import { auth } from '@/firebase/config';
 import { signOut } from 'firebase/auth';
 import { useState, useEffect } from 'react';
 
 const Header = () => {
   const { cartItems } = useCart();
-  const { user, isLoading: isAuthLoading } = useAuth(); // 2. Folosim hook-ul de autentificare
+  const { user, isLoading: isAuthLoading } = useAuth();
   const [isClient, setIsClient] = useState(false);
 
   useEffect(() => {
@@ -19,7 +20,6 @@ const Header = () => {
 
   const totalItems = cartItems.reduce((sum, item) => sum + item.quantity, 0);
 
-  // 3. Adăugăm funcția de logout
   const handleLogout = async () => {
     try {
       await signOut(auth);
@@ -39,7 +39,7 @@ const Header = () => {
             </Link>
           </div>
 
-          {/* 4. Secțiunea dinamică: Auth + Coș */}
+          {/* Secțiunea dinamică: Auth + Coș */}
           <div className="flex items-center space-x-4">
             {isAuthLoading ? (
               // Afișăm un placeholder în timp ce se verifică starea de auth
