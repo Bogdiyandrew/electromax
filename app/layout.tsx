@@ -1,8 +1,9 @@
 import type { Metadata } from "next";
 import { Inter } from "next/font/google";
 import "./globals.css";
-import { CartProvider } from "@/context/CartContext"; // Importăm provider-ul
-import Header from "@/components/Header"; // Importăm header-ul
+import { AuthProvider } from "@/context/AuthContext"; // Importăm AuthProvider
+import { CartProvider } from "@/context/CartContext"; // Importăm CartProvider
+import Header from "@/components/Header"; // Asigură-te că ai un component Header
 
 const inter = Inter({ subsets: ["latin"] });
 
@@ -19,10 +20,14 @@ export default function RootLayout({
   return (
     <html lang="en">
       <body className={inter.className}>
-        <CartProvider> {/* Îmbrăcăm totul în CartProvider */}
-          <Header /> {/* Adăugăm Header-ul deasupra conținutului */}
-          {children}
-        </CartProvider>
+        <AuthProvider> {/* AuthProvider trebuie să fie la exterior */}
+          <CartProvider> {/* CartProvider este în interiorul AuthProvider */}
+            <Header /> {/* Header-ul va avea acces la ambele contexte */}
+            <main className="pt-16"> {/* Adăugăm un padding-top pentru a nu se suprapune cu header-ul fix */}
+              {children}
+            </main>
+          </CartProvider>
+        </AuthProvider>
       </body>
     </html>
   );
