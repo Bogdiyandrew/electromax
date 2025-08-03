@@ -23,15 +23,10 @@ const LoginPage = () => {
     setError(null);
 
     try {
-      const userCredential = await signInWithEmailAndPassword(auth, email, password);
-      const user = userCredential.user;
-
-      if (!user.emailVerified) {
-        setError('Adresa de email nu a fost verificată. Te rugăm să verifici inbox-ul pentru link-ul de activare.');
-        await auth.signOut();
-        setIsLoading(false);
-        return;
-      }
+      await signInWithEmailAndPassword(auth, email, password);
+      
+      // AM ELIMINAT: Verificarea dacă emailul a fost confirmat.
+      // Acum utilizatorul va fi logat direct.
 
       router.push('/');
     } catch (err) {
