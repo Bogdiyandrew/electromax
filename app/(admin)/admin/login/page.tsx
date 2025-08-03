@@ -81,7 +81,8 @@ const AdminLogin = () => {
             return;
         }
         const phoneAuthProvider = new PhoneAuthProvider(auth);
-        const recaptchaVerifier = (window as any).recaptchaVerifier; // eslint-disable-next-line @typescript-eslint/no-explicit-any
+        // eslint-disable-next-line @typescript-eslint/no-explicit-any
+        const recaptchaVerifier = (window as any).recaptchaVerifier;
         const newVerificationId = await phoneAuthProvider.verifyPhoneNumber(phoneInfoOptions, recaptchaVerifier);
         setVerificationId(newVerificationId);
     } catch (err) {
@@ -99,7 +100,8 @@ const AdminLogin = () => {
 
     try {
       const phoneAuthProvider = new PhoneAuthProvider(auth);
-      const recaptchaVerifier = (window as any).recaptchaVerifier; // eslint-disable-next-line @typescript-eslint/no-explicit-any
+      // eslint-disable-next-line @typescript-eslint/no-explicit-any
+      const recaptchaVerifier = (window as any).recaptchaVerifier;
 
       const newVerificationId = await phoneAuthProvider.verifyPhoneNumber({
           phoneNumber: phoneNumber,
