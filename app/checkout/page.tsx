@@ -1,160 +1,160 @@
 'use client';
 
 import { useState, useEffect } from 'react';
-import { useCart, CartItem } from '@/context/CartContext';
-import { loadStripe, StripeElementsOptions } from '@stripe/stripe-js';
-import { Elements, PaymentElement, useStripe, useElements } from '@stripe/react-stripe-js';
-import { collection, addDoc, DocumentReference } from 'firebase/firestore';
+import { useStripe, useElements, PaymentElement } from '@stripe/react-stripe-js';
+import { useCart } from '@/context/CartContext';
+import { useAuth } from '@/app/context/AuthContext'; // 1. Importăm useAuth
 import { db } from '@/firebase/config';
+import { collection, addDoc } from 'firebase/firestore';
 import { useRouter } from 'next/navigation';
 
-const stripePromise = loadStripe(process.env.NEXT_PUBLIC_STRIPE_PUBLISHABLE_KEY!);
-
-const CheckoutForm = ({ clientSecret }: { clientSecret: string }) => {
+const CheckoutPage = () => {
   const stripe = useStripe();
   const elements = useElements();
-  const router = useRouter();
   const { cartItems, clearCart } = useCart();
-  const [errorMessage, setErrorMessage] = useState<string | null>(null);
-  const [isLoading, setIsLoading] = useState(false);
+  const { user } = useAuth(); // 2. Preluăm utilizatorul logat
+  const router = useRouter();
+
   const [shippingInfo, setShippingInfo] = useState({
     name: '',
     email: '',
     address: '',
     city: '',
-    postalCode: '',
+    state: '',
+    zip: '',
   });
+  const [isLoading, setIsLoading] = useState(false);
+  const [errorMessage, setErrorMessage] = useState<string | null>(null);
+  const [clientSecret, setClientSecret] = useState<string | null>(null);
 
-  const handleInputChange = (e: React.ChangeEvent<HTMLInputElement>) => {
-    const { name, value } = e.target;
-    setShippingInfo(prev => ({ ...prev, [name]: value }));
-  };
-
-  const handleSubmit = async (event: React.FormEvent) => {
-    event.preventDefault();
-    if (!stripe || !elements || !clientSecret) return;
-
-    setIsLoading(true);
-
-    const { error: submitError } = await elements.submit();
-    if (submitError) {
-      setErrorMessage(submitError.message || 'A apărut o eroare la trimiterea datelor.');
-      setIsLoading(false);
-      return;
-    }
-
-    const { error } = await stripe.confirmPayment({
-      elements,
-      clientSecret,
-      confirmParams: { return_url: `${window.location.origin}/order-confirmation` },
-      redirect: 'if_required',
-    });
-
-    if (error) {
-      setErrorMessage(error.message || 'Plata a eșuat.');
-      setIsLoading(false);
-    } else {
-      try {
-        const newOrderRef: DocumentReference = await addDoc(collection(db, 'orders'), {
-          shippingInfo,
-          cartItems,
-          total: cartItems.reduce((sum: number, item: CartItem) => sum + item.price * item.quantity, 0),
-          createdAt: new Date(),
-          status: 'pending',
-        });
-        
-        // Trimitem email-ul de confirmare
-        fetch('/api/send-confirmation-email', {
-          method: 'POST',
-          headers: { 'Content-Type': 'application/json' },
-          body: JSON.stringify({ orderId: newOrderRef.id }),
-        }).catch(emailError => {
-            console.error("Trimiterea email-ului de confirmare a eșuat:", emailError);
-        });
-        
-        // #################################################################
-        // ## MODIFICARE: Apelăm API-ul pentru a actualiza stocul         ##
-        // #################################################################
-        fetch('/api/update-stock', {
-            method: 'POST',
-            headers: { 'Content-Type': 'application/json' },
-            body: JSON.stringify({ orderId: newOrderRef.id }),
-        }).catch(stockError => {
-            // Logăm eroarea pentru investigații, dar nu blocăm utilizatorul
-            console.error("Actualizarea stocului a eșuat:", stockError);
-        });
-        
-        clearCart();
-        router.push('/order-confirmation');
-
-      } catch (dbError) {
-        console.error("Eroare la salvarea comenzii in Firestore:", dbError);
-        setErrorMessage('Plata a reușit, dar a apărut o eroare la salvarea comenzii.');
-        setIsLoading(false);
-      }
-    }
-  };
-
-  return (
-    <form onSubmit={handleSubmit} className="space-y-8">
-      <div>
-        <h2 className="text-lg font-medium text-gray-900">Informații de Livrare</h2>
-        <div className="mt-4 grid grid-cols-1 gap-y-6 sm:grid-cols-2 sm:gap-x-4">
-          <input name="name" type="text" required placeholder="Nume complet" onChange={handleInputChange} className="w-full px-3 py-2 border border-gray-300 rounded-md text-gray-900"/>
-          <input name="email" type="email" required placeholder="Adresă de email" onChange={handleInputChange} className="w-full px-3 py-2 border border-gray-300 rounded-md text-gray-900"/>
-          <input name="address" type="text" required placeholder="Adresă" onChange={handleInputChange} className="sm:col-span-2 w-full px-3 py-2 border border-gray-300 rounded-md text-gray-900"/>
-          <input name="city" type="text" required placeholder="Oraș" onChange={handleInputChange} className="w-full px-3 py-2 border border-gray-300 rounded-md text-gray-900"/>
-          <input name="postalCode" type="text" required placeholder="Cod Poștal" onChange={handleInputChange} className="w-full px-3 py-2 border border-gray-300 rounded-md text-gray-900"/>
-        </div>
-      </div>
-      <div>
-        <h2 className="text-lg font-medium text-gray-900">Detalii Plată</h2>
-        <div className="mt-4">
-          <PaymentElement />
-        </div>
-      </div>
-      {errorMessage && <div className="text-red-600">{errorMessage}</div>}
-      <button
-        type="submit"
-        disabled={isLoading || !stripe}
-        className="w-full bg-indigo-600 text-white py-3 px-4 rounded-md hover:bg-indigo-700 disabled:bg-indigo-400"
-      >
-        {isLoading ? 'Se procesează...' : 'Plătește Acum'}
-      </button>
-    </form>
-  );
-};
-
-const CheckoutPage = () => {
-  const [clientSecret, setClientSecret] = useState('');
-  const { cartItems } = useCart();
+  const totalAmount = cartItems.reduce((sum, item) => sum + item.price * item.quantity, 0);
 
   useEffect(() => {
-    if (cartItems.length > 0) {
+    if (totalAmount > 0) {
       fetch('/api/create-payment-intent', {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({ cartItems }),
+        body: JSON.stringify({ amount: totalAmount * 100 }), // Stripe vrea suma în cenți
       })
         .then((res) => res.json())
         .then((data) => setClientSecret(data.clientSecret));
     }
-  }, [cartItems]);
+  }, [totalAmount]);
 
-  const options: StripeElementsOptions = {
-    clientSecret,
-    appearance: { theme: 'stripe' },
+  const handleInputChange = (e: React.ChangeEvent<HTMLInputElement>) => {
+    const { name, value } = e.target;
+    setShippingInfo((prev) => ({ ...prev, [name]: value }));
+  };
+
+  const handleFormSubmit = async (e: React.FormEvent) => {
+    e.preventDefault();
+    if (!stripe || !elements || !clientSecret) {
+      return;
+    }
+    setIsLoading(true);
+
+    const { error: submitError } = await elements.submit();
+    if (submitError) {
+      setErrorMessage(submitError.message || 'A apărut o eroare.');
+      setIsLoading(false);
+      return;
+    }
+
+    const { error, paymentIntent } = await stripe.confirmPayment({
+      elements,
+      clientSecret,
+      confirmParams: {
+        return_url: `${window.location.origin}/order-confirmation`,
+        receipt_email: shippingInfo.email,
+      },
+      redirect: 'if_required',
+    });
+
+    if (error) {
+      setErrorMessage(error.message || 'A apărut o eroare la plată.');
+      setIsLoading(false);
+    } else if (paymentIntent && paymentIntent.status === 'succeeded') {
+      try {
+        // 3. Adăugăm userId la datele comenzii
+        const orderData = {
+          userId: user ? user.uid : null, // Adăugăm ID-ul utilizatorului sau null dacă nu e logat
+          shippingInfo,
+          cartItems,
+          total: totalAmount,
+          paymentIntentId: paymentIntent.id,
+          paymentStatus: paymentIntent.status,
+          createdAt: new Date(),
+        };
+
+        await addDoc(collection(db, 'orders'), orderData);
+        
+        // Golește coșul și redirecționează
+        clearCart();
+        router.push(`/order-confirmation?payment_intent=${paymentIntent.id}`);
+      } catch (dbError) {
+        console.error("Eroare la salvarea comenzii:", dbError);
+        setErrorMessage("Plata a fost procesată, dar a apărut o eroare la salvarea comenzii.");
+      }
+    } else {
+       setErrorMessage("Plata nu a putut fi procesată.");
+    }
+    setIsLoading(false);
   };
 
   return (
-    <div className="bg-gray-50">
-      <div className="max-w-2xl mx-auto pt-16 pb-24 px-4 sm:px-6 lg:max-w-7xl lg:px-8">
-        <h1 className="text-3xl font-extrabold text-gray-900 mb-8">Finalizează comanda</h1>
-        {clientSecret && (
-          <Elements options={options} stripe={stripePromise}>
-            <CheckoutForm clientSecret={clientSecret} />
-          </Elements>
-        )}
+    <div className="container mx-auto px-4 py-8">
+      <h1 className="text-3xl font-bold mb-6">Finalizare Comandă</h1>
+      <div className="grid grid-cols-1 lg:grid-cols-3 gap-8">
+        <div className="lg:col-span-2">
+          <form onSubmit={handleFormSubmit}>
+            <div className="bg-white p-6 rounded-lg shadow-md mb-6">
+              <h2 className="text-xl font-semibold mb-4">Informații de Livrare</h2>
+              {/* Câmpurile formularului de livrare */}
+              <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
+                <input type="text" name="name" placeholder="Nume complet" onChange={handleInputChange} required className="w-full p-2 border rounded" />
+                <input type="email" name="email" placeholder="Adresă de email" onChange={handleInputChange} required className="w-full p-2 border rounded" />
+                <input type="text" name="address" placeholder="Adresă" onChange={handleInputChange} required className="w-full p-2 border rounded sm:col-span-2" />
+                <input type="text" name="city" placeholder="Oraș" onChange={handleInputChange} required className="w-full p-2 border rounded" />
+                <input type="text" name="state" placeholder="Județ" onChange={handleInputChange} required className="w-full p-2 border rounded" />
+                <input type="text" name="zip" placeholder="Cod poștal" onChange={handleInputChange} required className="w-full p-2 border rounded" />
+              </div>
+            </div>
+            
+            {clientSecret && (
+              <div className="bg-white p-6 rounded-lg shadow-md">
+                <h2 className="text-xl font-semibold mb-4">Informații de Plată</h2>
+                <PaymentElement />
+              </div>
+            )}
+
+            <button
+              type="submit"
+              disabled={!stripe || isLoading || !clientSecret}
+              className="w-full mt-6 bg-indigo-600 text-white py-3 rounded-lg font-semibold hover:bg-indigo-700 disabled:bg-gray-400"
+            >
+              {isLoading ? 'Se procesează...' : `Plătește ${totalAmount.toFixed(2)} RON`}
+            </button>
+            {errorMessage && <p className="text-red-500 mt-4 text-center">{errorMessage}</p>}
+          </form>
+        </div>
+        <div className="lg:col-span-1">
+          <div className="bg-white p-6 rounded-lg shadow-md">
+            <h2 className="text-xl font-semibold mb-4">Sumar Comandă</h2>
+            <div className="space-y-4">
+              {cartItems.map(item => (
+                <div key={item.id} className="flex justify-between">
+                  <span>{item.name} x {item.quantity}</span>
+                  <span>{(item.price * item.quantity).toFixed(2)} RON</span>
+                </div>
+              ))}
+            </div>
+            <hr className="my-4" />
+            <div className="flex justify-between font-bold text-lg">
+              <span>Total</span>
+              <span>{totalAmount.toFixed(2)} RON</span>
+            </div>
+          </div>
+        </div>
       </div>
     </div>
   );
