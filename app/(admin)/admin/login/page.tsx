@@ -9,10 +9,9 @@ import {
   PhoneMultiFactorGenerator,
   MultiFactorResolver,
   RecaptchaVerifier,
-  MultiFactorUser,
   AuthError,
   MultiFactorError,
-  PhoneMultiFactorInfo // Importăm tipul specific
+  PhoneMultiFactorInfo
 } from 'firebase/auth';
 import { auth } from '@/firebase/config';
 
@@ -32,6 +31,7 @@ const AdminLogin = () => {
   const [phoneNumber, setPhoneNumber] = useState('');
   
   useEffect(() => {
+    // Inițializăm reCAPTCHA o singură dată
     if (!(window as any).recaptchaVerifier) {
       (window as any).recaptchaVerifier = new RecaptchaVerifier(auth, 'recaptcha-container', {
         'size': 'invisible',
@@ -72,7 +72,7 @@ const AdminLogin = () => {
     try {
         const phoneInfoOptions = resolver.hints.find(
             (info) => info.factorId === PhoneMultiFactorGenerator.FACTOR_ID
-        ) as PhoneMultiFactorInfo; // <-- CORECȚIE AICI
+        ) as PhoneMultiFactorInfo;
 
         if (!phoneInfoOptions) {
             setError("Acest cont nu are un număr de telefon configurat pentru 2FA.");
@@ -82,9 +82,9 @@ const AdminLogin = () => {
         const recaptchaVerifier = (window as any).recaptchaVerifier;
         const newVerificationId = await phoneAuthProvider.verifyPhoneNumber(phoneInfoOptions, recaptchaVerifier);
         setVerificationId(newVerificationId);
-    } catch (error) {
+    } catch (err) {
+        console.error("MFA Verify Error:", err);
         setError("Eroare la trimiterea codului SMS. Reîmprospătează pagina și încearcă din nou.");
-        console.error("MFA Verify Error:", error);
     }
   }
 
@@ -106,9 +106,9 @@ const AdminLogin = () => {
 
       setVerificationId(newVerificationId);
       setMfaStep('VERIFY');
-    } catch (error) {
+    } catch (err) {
+      console.error(err);
       setError("Numărul de telefon este invalid sau a apărut o eroare.");
-      console.error(error);
     } finally {
       setIsLoading(false);
     }
@@ -125,9 +125,9 @@ const AdminLogin = () => {
       const multiFactorAssertion = PhoneMultiFactorGenerator.assertion(cred);
       await mfaResolver.resolveSignIn(multiFactorAssertion);
       router.push('/admin/dashboard');
-    } catch (error) {
+    } catch (err) {
+      console.error(err);
       setError("Codul de verificare este invalid sau a expirat.");
-      console.error(error);
     } finally {
       setIsLoading(false);
     }
