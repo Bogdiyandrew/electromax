@@ -37,7 +37,7 @@ const LoginPage = () => {
     } catch (err) {
       const error = err as { code?: string };
 
-      if (error.code === 'auth/user-not-found' || error.code === 'auth/wrong-password') {
+      if (error.code === 'auth/user-not-found' || error.code === 'auth/wrong-password' || error.code === 'auth/invalid-credential') {
         setError('Adresa de email sau parola este incorectă.');
       } else {
         setError('A apărut o eroare la autentificare. Vă rugăm încercați din nou.');
