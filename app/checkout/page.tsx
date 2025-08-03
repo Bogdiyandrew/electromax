@@ -135,12 +135,22 @@ const CheckoutPage = () => {
       fetch('/api/create-payment-intent', {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({ cartItems }), // Trimit cartItems corect
+        body: JSON.stringify({ cartItems }),
       })
-        .then((res) => res.json())
-        .then((data) => setClientSecret(data.clientSecret));
+        .then(async (res) => {
+          const data = await res.json();
+          if (!res.ok) {
+            console.error('Stripe API error:', data.error);
+            setClientSecret('');
+          } else {
+            setClientSecret(data.clientSecret);
+          }
+        })
+        .catch((err) => {
+          console.error('Network or parsing error:', err);
+        });
     }
-  }, [totalAmount]);
+  }, [totalAmount, cartItems]);
 
   const options: StripeElementsOptions = {
     clientSecret,
