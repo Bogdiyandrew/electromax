@@ -159,7 +159,7 @@ const CheckoutPage = () => {
       fetch('/api/create-payment-intent', {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({ amount: totalAmount * 100 }),
+        body: JSON.stringify({ amount: totalAmount * 100, cartItems }), // Trimit și cartItems
       })
         .then((res) => res.json())
         .then((data) => setClientSecret(data.clientSecret));
