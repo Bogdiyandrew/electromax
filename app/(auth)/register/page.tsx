@@ -5,7 +5,6 @@ import { useRouter } from 'next/navigation';
 import Link from 'next/link';
 import {
   createUserWithEmailAndPassword,
-  sendEmailVerification,
   updateProfile
 } from 'firebase/auth';
 import { auth, db } from '@/firebase/config';
@@ -34,9 +33,13 @@ const RegisterPage = () => {
       const userCredential = await createUserWithEmailAndPassword(auth, email, password);
       const user = userCredential.user;
 
+      // Actualizăm profilul utilizatorului cu numele introdus
       await updateProfile(user, { displayName: name });
-      await sendEmailVerification(user);
+      
+      // AM ELIMINAT: Trimiterea emailului de verificare
+      // await sendEmailVerification(user);
 
+      // Salvăm informații suplimentare despre utilizator în Firestore
       await setDoc(doc(db, "users", user.uid), {
         uid: user.uid,
         name,
@@ -45,8 +48,10 @@ const RegisterPage = () => {
         createdAt: new Date()
       });
 
-      alert('Contul a fost creat cu succes! V-am trimis un email de verificare. Vă rugăm să verificați inbox-ul pentru a activa contul.');
-      router.push('/login');
+      // AM ELIMINAT: Alerta despre email
+      
+      // Redirecționăm direct către pagina principală, utilizatorul fiind deja logat
+      router.push('/');
 
     } catch (err) {
       const error = err as { code?: string };
