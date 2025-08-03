@@ -54,6 +54,7 @@ const RegisterPage = () => {
       router.push('/login'); // Redirecționăm către pagina de login după înregistrare
 
     } catch (err: any) {
+      // eslint-disable-next-line @typescript-eslint/no-explicit-any
       if (err.code === 'auth/email-already-in-use') {
         setError('Această adresă de email este deja folosită.');
       } else {

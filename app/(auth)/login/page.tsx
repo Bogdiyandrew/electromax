@@ -38,6 +38,7 @@ const LoginPage = () => {
       router.push('/'); 
 
     } catch (err: any) {
+      // eslint-disable-next-line @typescript-eslint/no-explicit-any
       if (err.code === 'auth/user-not-found' || err.code === 'auth/wrong-password') {
         setError('Adresa de email sau parola este incorectă.');
       } else {
