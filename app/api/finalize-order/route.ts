@@ -25,7 +25,9 @@ const stripe = new Stripe(process.env.STRIPE_SECRET_KEY!);
 
 export async function POST(request: Request) {
   try {
-    const { paymentIntentId } = await request.json();
+    // ✅ CORECȚIE: Atribuim un tip specific corpului cererii pentru a elimina 'any'
+    const body: { paymentIntentId?: string } = await request.json();
+    const paymentIntentId = body.paymentIntentId;
 
     if (!paymentIntentId) {
       return NextResponse.json({ error: 'ID-ul plății este obligatoriu.' }, { status: 400 });
@@ -74,7 +76,7 @@ export async function POST(request: Request) {
 
     return NextResponse.json({ success: true, orderId: docRef.id });
 
-  } catch (error: unknown) { // Am înlocuit 'any' cu 'unknown' pentru o mai bună siguranță a tipului
+  } catch (error: unknown) {
     console.error('Eroare la finalizarea comenzii pe server:', error);
     const errorMessage = error instanceof Error ? error.message : 'A apărut o eroare necunoscută.';
     return NextResponse.json({ error: errorMessage }, { status: 500 });
