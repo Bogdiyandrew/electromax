@@ -3,6 +3,24 @@ import Stripe from 'stripe';
 import { db } from '@/firebase/config';
 import { collection, addDoc, query, where, getDocs } from 'firebase/firestore';
 
+// Definim interfețe pentru a asigura tipizarea corectă a datelor
+interface CartItem {
+  id: string;
+  name: string;
+  price: number;
+  quantity: number;
+  // Adaugă aici alte proprietăți dacă există, ex: imageUrl
+}
+
+interface ShippingInfo {
+  name: string;
+  email: string;
+  address: string;
+  city: string;
+  state: string;
+  zip: string;
+}
+
 const stripe = new Stripe(process.env.STRIPE_SECRET_KEY!);
 
 export async function POST(request: Request) {
@@ -30,10 +48,10 @@ export async function POST(request: Request) {
         return NextResponse.json({ error: 'Plata nu a fost finalizată cu succes.' }, { status: 400 });
     }
 
-    // Extragem metadatele pe care le-am salvat la crearea PaymentIntent
+    // Extragem metadatele și le atribuim tipul corect
     const metadata = paymentIntent.metadata;
-    const cartItems = JSON.parse(metadata.cartItems || '[]');
-    const shippingInfo = JSON.parse(metadata.shippingInfo || '{}');
+    const cartItems = JSON.parse(metadata.cartItems || '[]') as CartItem[];
+    const shippingInfo = JSON.parse(metadata.shippingInfo || '{}') as ShippingInfo;
     const userId = metadata.userId;
 
     // Construim obiectul final al comenzii
@@ -56,8 +74,9 @@ export async function POST(request: Request) {
 
     return NextResponse.json({ success: true, orderId: docRef.id });
 
-  } catch (error: any) {
+  } catch (error: unknown) { // Am înlocuit 'any' cu 'unknown' pentru o mai bună siguranță a tipului
     console.error('Eroare la finalizarea comenzii pe server:', error);
-    return NextResponse.json({ error: error.message }, { status: 500 });
+    const errorMessage = error instanceof Error ? error.message : 'A apărut o eroare necunoscută.';
+    return NextResponse.json({ error: errorMessage }, { status: 500 });
   }
 }
