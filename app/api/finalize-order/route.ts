@@ -1,6 +1,6 @@
 import { NextResponse } from 'next/server';
 import Stripe from 'stripe';
-import { adminDb as db } from '@/firebase/admin-config'; // Admin SDK
+import { adminDb as db } from '@/firebase/admin-config';
 
 // Tipuri
 interface CartItem {
@@ -19,7 +19,6 @@ interface ShippingInfo {
   zip: string;
 }
 
-// Inițializează Stripe fără apiVersion explicit
 const stripe = new Stripe(process.env.STRIPE_SECRET_KEY!);
 
 export async function POST(request: Request) {
@@ -31,7 +30,7 @@ export async function POST(request: Request) {
       return NextResponse.json({ error: 'ID-ul plății este obligatoriu.' }, { status: 400 });
     }
 
-    // Verifică dacă comanda a fost deja procesată
+    // Verificăm dacă comanda a fost deja salvată
     const ordersRef = db.collection('orders');
     const existingOrders = await ordersRef
       .where('paymentIntentId', '==', paymentIntentId)
@@ -46,7 +45,7 @@ export async function POST(request: Request) {
       });
     }
 
-    // Obține detalii despre plată de la Stripe
+    // Preluăm detalii de plată de la Stripe
     const paymentIntent = await stripe.paymentIntents.retrieve(paymentIntentId);
 
     if (paymentIntent.status !== 'succeeded') {
@@ -59,7 +58,7 @@ export async function POST(request: Request) {
     const metadata = paymentIntent.metadata;
     const cartItems: CartItem[] = JSON.parse(metadata.cartItems || '[]');
     const shippingInfo: ShippingInfo = JSON.parse(metadata.shippingInfo || '{}');
-    const userId = metadata.userId;
+    const userId: string | null = metadata.userId ?? null; // ✅ evită undefined
 
     const orderData = {
       userId,
