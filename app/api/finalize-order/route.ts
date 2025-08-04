@@ -1,24 +1,15 @@
 import { NextResponse } from 'next/server';
 import Stripe from 'stripe';
 import { db } from '@/firebase/config';
-import { 
-  collection, 
-  addDoc, 
-  query, 
-  where, 
-  getDocs,
-  DocumentData,
-  QueryDocumentSnapshot,
-  SnapshotOptions,
-  FirestoreDataConverter
-} from 'firebase/firestore';
+import { collection, addDoc, query, where, getDocs } from 'firebase/firestore';
 
-// Definim interfețe pentru a asigura tipizarea corectă a datelor
+// Interfețe pentru tipizare
 interface CartItem {
   id: string;
   name: string;
   price: number;
   quantity: number;
+  // Poți adăuga aici alte proprietăți ex: imageUrl
 }
 
 interface ShippingInfo {
@@ -29,39 +20,6 @@ interface ShippingInfo {
   state: string;
   zip: string;
 }
-
-// Definim interfața pentru o Comandă
-interface Order {
-  userId: string | null;
-  shippingInfo: ShippingInfo;
-  cartItems: CartItem[];
-  total: number;
-  paymentIntentId: string;
-  paymentStatus: string;
-  createdAt: Date;
-}
-
-// ✅ CORECȚIE FINALĂ: Creăm un "converter" pentru a elimina complet tipul 'any'
-const orderConverter: FirestoreDataConverter<Order> = {
-  toFirestore(order: Order): DocumentData {
-    return { ...order };
-  },
-  fromFirestore(
-    snapshot: QueryDocumentSnapshot,
-    options: SnapshotOptions
-  ): Order {
-    const data = snapshot.data(options);
-    return {
-      userId: data.userId,
-      shippingInfo: data.shippingInfo,
-      cartItems: data.cartItems,
-      total: data.total,
-      paymentIntentId: data.paymentIntentId,
-      paymentStatus: data.paymentStatus,
-      createdAt: data.createdAt.toDate(),
-    };
-  }
-};
 
 const stripe = new Stripe(process.env.STRIPE_SECRET_KEY!);
 
@@ -74,20 +32,25 @@ export async function POST(request: Request) {
       return NextResponse.json({ error: 'ID-ul plății este obligatoriu.' }, { status: 400 });
     }
 
-    // Folosim converter-ul pentru a avea tipuri de date stricte
-    const ordersRef = collection(db, 'orders').withConverter(orderConverter);
+    // Verificăm dacă comanda există deja
+    const ordersRef = collection(db, 'orders');
     const q = query(ordersRef, where('paymentIntentId', '==', paymentIntentId));
     const querySnapshot = await getDocs(q);
 
     if (!querySnapshot.empty) {
       console.log("Comanda a fost deja procesată anterior.");
-      return NextResponse.json({ success: true, orderId: querySnapshot.docs[0].id, message: 'Comanda a fost deja procesată.' });
+      return NextResponse.json({
+        success: true,
+        orderId: querySnapshot.docs[0].id,
+        message: 'Comanda a fost deja procesată.'
+      });
     }
 
+    // Obținem detalii de la Stripe
     const paymentIntent = await stripe.paymentIntents.retrieve(paymentIntentId);
 
     if (paymentIntent.status !== 'succeeded') {
-        return NextResponse.json({ error: 'Plata nu a fost finalizată cu succes.' }, { status: 400 });
+      return NextResponse.json({ error: 'Plata nu a fost finalizată cu succes.' }, { status: 400 });
     }
 
     const metadata = paymentIntent.metadata;
@@ -95,8 +58,8 @@ export async function POST(request: Request) {
     const shippingInfo = JSON.parse(metadata.shippingInfo || '{}') as ShippingInfo;
     const userId = metadata.userId;
 
-    const orderData: Order = {
-      userId: userId,
+    const orderData = {
+      userId,
       shippingInfo,
       cartItems,
       total: paymentIntent.amount / 100,
@@ -105,14 +68,18 @@ export async function POST(request: Request) {
       createdAt: new Date(paymentIntent.created * 1000),
     };
 
-    const docRef = await addDoc(ordersRef, orderData);
+    const docRef = await addDoc(collection(db, 'orders'), orderData);
     console.log("Comanda a fost salvată cu succes în Firestore cu ID-ul:", docRef.id);
 
     return NextResponse.json({ success: true, orderId: docRef.id });
 
   } catch (error: unknown) {
-    console.error('Eroare la finalizarea comenzii pe server:', error);
-    const errorMessage = error instanceof Error ? error.message : 'A apărut o eroare necunoscută.';
-    return NextResponse.json({ error: errorMessage }, { status: 500 });
+    if (error instanceof Error) {
+      console.error('Eroare la finalizarea comenzii pe server:', error.message);
+      return NextResponse.json({ error: error.message }, { status: 500 });
+    } else {
+      console.error('Eroare necunoscută la finalizarea comenzii.');
+      return NextResponse.json({ error: 'A apărut o eroare necunoscută.' }, { status: 500 });
+    }
   }
 }
