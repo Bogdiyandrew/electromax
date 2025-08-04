@@ -10,7 +10,7 @@ const OrderConfirmationContent = () => {
   const searchParams = useSearchParams();
   const { clearCart } = useCart();
 
-  const [status, setStatus] = useState('processing'); // Stări posibile: 'processing', 'succeeded', 'failed'
+  const [status, setStatus] = useState<'processing' | 'succeeded' | 'failed'>('processing');
   const [error, setError] = useState<string | null>(null);
   const [orderId, setOrderId] = useState<string | null>(null);
 
@@ -25,7 +25,6 @@ const OrderConfirmationContent = () => {
 
     const finalizeOrder = async () => {
       try {
-        // Apelăm noul API endpoint pentru a finaliza comanda pe server
         const response = await fetch('/api/finalize-order', {
           method: 'POST',
           headers: { 'Content-Type': 'application/json' },
@@ -35,25 +34,28 @@ const OrderConfirmationContent = () => {
         const data = await response.json();
 
         if (!response.ok) {
-          // Dacă răspunsul de la API nu este "ok", aruncăm o eroare cu mesajul de la server
           throw new Error(data.error || 'A apărut o eroare la finalizarea comenzii.');
         }
-        
-        // Comanda a fost procesată și salvată cu succes pe server
+
         setOrderId(data.orderId);
         setStatus('succeeded');
-        clearCart(); // Golim coșul doar după ce totul a reușit
+        clearCart();
+      } catch (err: unknown) {
+        console.error('Eroare la finalizarea comenzii:', err);
 
-      } catch (err: any) {
-        console.error("Eroare la finalizarea comenzii:", err);
-        setError(err.message || "A apărut o eroare la salvarea comenzii. Vă rugăm contactați suportul.");
+        if (err instanceof Error) {
+          setError(err.message);
+        } else {
+          setError('A apărut o eroare la salvarea comenzii. Vă rugăm contactați suportul.');
+        }
+
         setStatus('failed');
       }
     };
 
     finalizeOrder();
     // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, []); // Rulează o singură dată, la încărcarea paginii
+  }, []);
 
   if (status === 'processing') {
     return <p className="text-center text-lg">Se finalizează comanda... Vă rugăm nu închideți fereastra.</p>;
