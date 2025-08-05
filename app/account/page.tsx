@@ -33,7 +33,6 @@ const AccountPage = () => {
     const fetchOrders = async () => {
       if (user) {
         try {
-          // Creăm un query pentru a găsi comenzile care au userId-ul utilizatorului curent
           const ordersQuery = query(
             collection(db, 'orders'), 
             where('userId', '==', user.uid),
@@ -55,54 +54,50 @@ const AccountPage = () => {
       }
     };
 
-    fetchOrders();
-  }, [user]); // Se re-rulează de fiecare dată când obiectul user se schimbă
+    if (user) {
+        fetchOrders();
+    }
+  }, [user]);
 
-  // Afișăm o stare de încărcare generală
-  if (isAuthLoading) {
+  if (isAuthLoading || !user) {
     return (
       <div className="flex justify-center items-center min-h-screen">
-        <p>Se încarcă...</p>
+        <p className="text-gray-400">Se încarcă...</p>
       </div>
     );
   }
 
-  // Dacă am trecut de încărcarea inițială și tot nu există user, nu afișăm nimic (va fi redirecționat)
-  if (!user) {
-    return null;
-  }
-
   return (
     <div className="container mx-auto px-4 py-8">
-      <h1 className="text-3xl font-bold mb-6">Contul Meu</h1>
+      <h1 className="text-3xl font-bold mb-6 text-white">Contul Meu</h1>
       
       {/* Secțiunea cu detaliile contului */}
-      <div className="bg-white p-6 rounded-lg shadow-md mb-8">
-        <h2 className="text-xl font-semibold mb-4">Detalii Cont</h2>
-        <div className="space-y-2">
+      <div className="bg-gray-800 p-6 rounded-lg shadow-md mb-8 border border-gray-700">
+        <h2 className="text-xl font-semibold mb-4 text-white">Detalii Cont</h2>
+        <div className="space-y-2 text-gray-300">
           <p><strong>Nume:</strong> {user.displayName}</p>
           <p><strong>Email:</strong> {user.email}</p>
         </div>
       </div>
 
       {/* Secțiunea cu istoricul comenzilor */}
-      <div className="bg-white p-6 rounded-lg shadow-md">
-        <h2 className="text-xl font-semibold mb-4">Istoric Comenzi</h2>
+      <div className="bg-gray-800 p-6 rounded-lg shadow-md border border-gray-700">
+        <h2 className="text-xl font-semibold mb-4 text-white">Istoric Comenzi</h2>
         {isLoadingOrders ? (
-          <p>Se încarcă istoricul comenzilor...</p>
+          <p className="text-gray-400">Se încarcă istoricul comenzilor...</p>
         ) : orders.length > 0 ? (
-          <ul className="divide-y divide-gray-200">
+          <ul className="divide-y divide-gray-700">
             {orders.map(order => (
               <li key={order.id} className="py-4 flex justify-between items-center">
                 <div>
-                  <p className="font-medium">Comanda #{order.id.substring(0, 8)}</p>
-                  <p className="text-sm text-gray-500">
+                  <p className="font-medium text-white">Comanda #{order.id.substring(0, 8)}</p>
+                  <p className="text-sm text-gray-400">
                     Data: {new Date(order.createdAt.seconds * 1000).toLocaleDateString('ro-RO')}
                   </p>
                 </div>
                 <div className="text-right">
-                  <p className="font-semibold">{order.total.toFixed(2)} RON</p>
-                  <Link href={`/order/${order.id}`} className="text-sm text-indigo-600 hover:underline">
+                  <p className="font-semibold text-gray-200">{order.total.toFixed(2)} RON</p>
+                  <Link href={`/order/${order.id}`} className="text-sm text-blue-500 hover:underline">
                     Vezi detalii
                   </Link>
                 </div>
@@ -110,7 +105,7 @@ const AccountPage = () => {
             ))}
           </ul>
         ) : (
-          <p>Nu ai plasat nicio comandă până acum.</p>
+          <p className="text-gray-400">Nu ai plasat nicio comandă până acum.</p>
         )}
       </div>
     </div>

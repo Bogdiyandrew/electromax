@@ -1,25 +1,16 @@
 @import "tailwindcss";
 
 :root {
-  /* Am setat culorile default pentru tema întunecată */
-  --background: #111827; /* Un gri foarte închis, aproape negru (Tailwind gray-900) */
-  --foreground: #f9fafb; /* Un alb-gri (Tailwind gray-50) */
+  /* Schimbă background-ul să fie gradient ca în hero */
+  --background: linear-gradient(135deg, #111827 0%, #1f2937 50%, #1e3a8a 100%);
+  --foreground: #f9fafb;
 }
 
 body {
   background: var(--background);
+  background-attachment: fixed; /* Important pentru gradient fix */
   color: var(--foreground);
   font-family: Arial, Helvetica, sans-serif;
-}
-
-/* Ascunde săgețile de la input[type=number] */
-input[type='number']::-webkit-outer-spin-button,
-input[type='number']::-webkit-inner-spin-button {
-  -webkit-appearance: none;
   margin: 0;
-}
-
-input[type='number'] {
-  -moz-appearance: textfield;
-  appearance: textfield;
+  padding: 0;
 }
