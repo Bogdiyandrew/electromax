@@ -33,13 +33,8 @@ const RegisterPage = () => {
       const userCredential = await createUserWithEmailAndPassword(auth, email, password);
       const user = userCredential.user;
 
-      // Actualizăm profilul utilizatorului cu numele introdus
       await updateProfile(user, { displayName: name });
       
-      // AM ELIMINAT: Trimiterea emailului de verificare
-      // await sendEmailVerification(user);
-
-      // Salvăm informații suplimentare despre utilizator în Firestore
       await setDoc(doc(db, "users", user.uid), {
         uid: user.uid,
         name,
@@ -47,10 +42,7 @@ const RegisterPage = () => {
         role: 'client',
         createdAt: new Date()
       });
-
-      // AM ELIMINAT: Alerta despre email
       
-      // Redirecționăm direct către pagina principală, utilizatorul fiind deja logat
       router.push('/');
 
     } catch (err) {
@@ -68,15 +60,15 @@ const RegisterPage = () => {
   };
 
   return (
-    <div className="flex items-center justify-center min-h-screen bg-gray-100">
-      <div className="w-full max-w-md p-8 space-y-6 bg-white rounded-lg shadow-md">
+    <div className="flex items-center justify-center min-h-screen py-12">
+      <div className="w-full max-w-md p-8 space-y-6 bg-gray-800 rounded-lg shadow-md">
         <div className="text-center">
-          <h1 className="text-2xl font-bold text-gray-900">Creează un Cont Nou</h1>
-          <p className="mt-2 text-gray-600">Completează detaliile pentru a te înregistra.</p>
+          <h1 className="text-2xl font-bold text-white">Creează un Cont Nou</h1>
+          <p className="mt-2 text-gray-400">Completează detaliile pentru a te înregistra.</p>
         </div>
         <form onSubmit={handleRegister} className="space-y-4">
           <div>
-            <label htmlFor="name" className="text-sm font-medium text-gray-700">Nume complet</label>
+            <label htmlFor="name" className="text-sm font-medium text-gray-300">Nume complet</label>
             <input
               id="name"
               name="name"
@@ -84,11 +76,11 @@ const RegisterPage = () => {
               required
               value={name}
               onChange={(e) => setName(e.target.value)}
-              className="w-full px-3 py-2 mt-1 border border-gray-300 rounded-md text-gray-900"
+              className="w-full px-3 py-2 mt-1 border border-gray-600 rounded-md bg-gray-700 text-white focus:ring-blue-500 focus:border-blue-500"
             />
           </div>
           <div>
-            <label htmlFor="email" className="text-sm font-medium text-gray-700">Adresă de email</label>
+            <label htmlFor="email" className="text-sm font-medium text-gray-300">Adresă de email</label>
             <input
               id="email"
               name="email"
@@ -96,11 +88,11 @@ const RegisterPage = () => {
               required
               value={email}
               onChange={(e) => setEmail(e.target.value)}
-              className="w-full px-3 py-2 mt-1 border border-gray-300 rounded-md text-gray-900"
+              className="w-full px-3 py-2 mt-1 border border-gray-600 rounded-md bg-gray-700 text-white focus:ring-blue-500 focus:border-blue-500"
             />
           </div>
           <div>
-            <label htmlFor="password" className="text-sm font-medium text-gray-700">Parolă</label>
+            <label htmlFor="password" className="text-sm font-medium text-gray-300">Parolă</label>
             <input
               id="password"
               name="password"
@@ -108,22 +100,22 @@ const RegisterPage = () => {
               required
               value={password}
               onChange={(e) => setPassword(e.target.value)}
-              className="w-full px-3 py-2 mt-1 border border-gray-300 rounded-md text-gray-900"
+              className="w-full px-3 py-2 mt-1 border border-gray-600 rounded-md bg-gray-700 text-white focus:ring-blue-500 focus:border-blue-500"
             />
           </div>
-          {error && <p className="text-sm text-center text-red-600">{error}</p>}
+          {error && <p className="text-sm text-center text-red-500">{error}</p>}
           <button
             type="submit"
             disabled={isLoading}
-            className="w-full px-4 py-2 font-medium text-white bg-indigo-600 rounded-md hover:bg-indigo-700 disabled:bg-indigo-400"
+            className="w-full px-4 py-2 font-medium text-white bg-blue-600 rounded-md hover:bg-blue-700 disabled:bg-blue-800"
           >
             {isLoading ? 'Se creează contul...' : 'Înregistrează-te'}
           </button>
         </form>
         <div className="text-center">
-          <p className="text-sm text-gray-600">
+          <p className="text-sm text-gray-400">
             Ai deja un cont?{' '}
-            <Link href="/login" className="font-medium text-indigo-600 hover:underline">
+            <Link href="/login" className="font-medium text-blue-500 hover:underline">
               Autentifică-te
             </Link>
           </p>

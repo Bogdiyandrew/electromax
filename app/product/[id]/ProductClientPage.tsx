@@ -62,16 +62,16 @@ export default function ProductClientPage({ product }: { product: Product }) {
   };
 
   return (
-    <div className="bg-white">
-      <div className="max-w-7xl mx-auto py-16 px-4 sm:px-6 lg:px-8">
+    <div className="py-16">
+      <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
         <div className="mb-8">
-            <Link href="/" className="text-indigo-600 hover:text-indigo-800">
+            <Link href="/" className="text-blue-400 hover:text-blue-300">
                 &larr; Înapoi la toate produsele
             </Link>
         </div>
         <div className="grid md:grid-cols-2 gap-12 items-start">
           <div>
-            <div className="w-full h-96 bg-gray-200 rounded-lg flex items-center justify-center relative overflow-hidden">
+            <div className="w-full h-96 bg-gray-800 border border-gray-700 rounded-lg flex items-center justify-center relative overflow-hidden">
               {product.imageUrl ? (
                 <Image
                   src={product.imageUrl}
@@ -81,35 +81,36 @@ export default function ProductClientPage({ product }: { product: Product }) {
                   style={{ objectFit: 'cover' }}
                 />
               ) : (
-                <span className="text-gray-500">Imagine indisponibilă</span>
+                <span className="text-gray-400">Imagine indisponibilă</span>
               )}
             </div>
+            {/* Secțiunea de thumbnail-uri, stilizată pentru dark mode */}
             <div className="grid grid-cols-4 gap-4 mt-4">
-              <div className="w-full h-24 bg-gray-200 rounded-md"></div>
-              <div className="w-full h-24 bg-gray-200 rounded-md"></div>
-              <div className="w-full h-24 bg-gray-200 rounded-md"></div>
-              <div className="w-full h-24 bg-gray-200 rounded-md"></div>
+              <div className="w-full h-24 bg-gray-800 border border-gray-700 rounded-md"></div>
+              <div className="w-full h-24 bg-gray-800 border border-gray-700 rounded-md"></div>
+              <div className="w-full h-24 bg-gray-800 border border-gray-700 rounded-md"></div>
+              <div className="w-full h-24 bg-gray-800 border border-gray-700 rounded-md"></div>
             </div>
           </div>
 
           <div className="space-y-6">
             <div>
-              <p className="text-sm font-medium text-indigo-600">{product.category}</p>
-              <h1 className="text-4xl font-extrabold text-gray-900 mt-2">{product.name}</h1>
+              <p className="text-sm font-medium text-blue-500">{product.category}</p>
+              <h1 className="text-4xl font-extrabold text-white mt-2">{product.name}</h1>
             </div>
             
             <div>
-              <p className="text-3xl text-gray-900">{product.price.toFixed(2)} RON</p>
+              <p className="text-3xl text-white">{product.price.toFixed(2)} RON</p>
             </div>
 
-            <div className="prose lg:prose-xl text-gray-600">
-              <h2 className="text-xl font-semibold text-gray-800">Descriere</h2>
+            <div className="prose lg:prose-xl text-gray-400">
+              <h2 className="text-xl font-semibold text-gray-200">Descriere</h2>
               <p>{product.description}</p>
             </div>
 
             <div>
-              <p className="text-sm text-gray-500">
-                Stoc: <span className="font-medium text-green-600">
+              <p className="text-sm text-gray-400">
+                Stoc: <span className="font-medium text-green-500">
                     {product.isUnlimited 
                         ? 'Disponibil la comandă' 
                         : (product.stock > 0 ? `${product.stock} ${product.unit || 'buc.'} disponibile` : 'Stoc epuizat')}
@@ -118,28 +119,28 @@ export default function ProductClientPage({ product }: { product: Product }) {
             </div>
 
             <div className="flex items-center gap-4">
-                <div className="flex items-center border border-gray-300 rounded-md">
-                    <button onClick={decreaseQuantity} className="px-3 py-2 text-gray-600 hover:bg-gray-100 rounded-l-md" disabled={quantity <= 1}>
+                <div className="flex items-center border border-gray-600 rounded-md bg-gray-700">
+                    <button onClick={decreaseQuantity} className="px-3 py-2 text-gray-300 hover:bg-gray-600 rounded-l-md" disabled={quantity <= 1}>
                         <Minus size={16} />
                     </button>
                     <input 
                         type="number"
                         value={quantity}
                         onChange={handleQuantityChange}
-                        className="w-16 text-center border-y-0 border-x text-gray-900 font-semibold focus:outline-none focus:ring-0"
+                        className="w-16 text-center border-y-0 border-x border-gray-600 bg-gray-700 text-white font-semibold focus:outline-none focus:ring-0"
                     />
-                    <button onClick={increaseQuantity} className="px-3 py-2 text-gray-600 hover:bg-gray-100 rounded-r-md" disabled={!product.isUnlimited && quantity >= product.stock}>
+                    <button onClick={increaseQuantity} className="px-3 py-2 text-gray-300 hover:bg-gray-600 rounded-r-md" disabled={!product.isUnlimited && quantity >= product.stock}>
                         <Plus size={16} />
                     </button>
                 </div>
-                <span className="text-gray-600 font-medium">{product.unit || 'buc.'}</span>
+                <span className="text-gray-400 font-medium">{product.unit || 'buc.'}</span>
                 <button
-                type="button"
-                onClick={handleAddToCart}
-                disabled={!product.isUnlimited && product.stock === 0}
-                className="flex-1 px-8 py-3 text-base font-bold text-white bg-indigo-600 rounded-md hover:bg-indigo-700"
+                  type="button"
+                  onClick={handleAddToCart}
+                  disabled={!product.isUnlimited && product.stock === 0}
+                  className="flex-1 px-8 py-3 text-base font-bold text-white bg-blue-600 rounded-md hover:bg-blue-700 disabled:bg-blue-800 disabled:cursor-not-allowed"
                 >
-                Adaugă în coș
+                  Adaugă în coș
                 </button>
             </div>
           </div>

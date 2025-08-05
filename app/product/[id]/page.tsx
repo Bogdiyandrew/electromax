@@ -12,7 +12,7 @@ interface Product {
   stock: number;
   imageUrl?: string;
   unit?: string;
-  isUnlimited?: boolean; // Am adăugat câmpul
+  isUnlimited?: boolean;
 }
 
 async function getProduct(id: string): Promise<Product | null> {
@@ -32,15 +32,32 @@ async function getProduct(id: string): Promise<Product | null> {
     stock: data.stock,
     imageUrl: data.imageUrl || '',
     unit: data.unit || 'buc.',
-    isUnlimited: data.isUnlimited || false, // Preluăm câmpul
+    isUnlimited: data.isUnlimited || false,
   };
 }
 
-// eslint-disable-next-line @typescript-eslint/no-explicit-any
-export default async function ProductPage({ params }: any) {
-  const product = await getProduct(params.id);
+// 👇 FIXURI OBLIGATORII pentru Next.js să tacă
+export const dynamic = "force-dynamic";
 
-  if (!product) notFound();
+export async function generateStaticParams() {
+  return [];
+}
+
+// 👇 Asta e cheia: fără destructurare în semnătură
+export default async function ProductPage(props: any) {
+  const params = await props.params;
+
+  const id = typeof params?.id === 'string' ? params.id : '';
+
+  if (!id) {
+    notFound();
+  }
+
+  const product = await getProduct(id);
+
+  if (!product) {
+    notFound();
+  }
 
   return <ProductClientPage product={product} />;
 }

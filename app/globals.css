@@ -1,21 +1,9 @@
 @import "tailwindcss";
 
 :root {
-  --background: #ffffff;
-  --foreground: #171717;
-
-  /* MODIFICARE: Am mutat regulile de la @theme aici */
-  --color-background: var(--background);
-  --color-foreground: var(--foreground);
-  --font-sans: var(--font-geist-sans);
-  --font-mono: var(--font-geist-mono);
-}
-
-@media (prefers-color-scheme: dark) {
-  :root {
-    --background: #0a0a0a;
-    --foreground: #ededed;
-  }
+  /* Am setat culorile default pentru tema întunecată */
+  --background: #111827; /* Un gri foarte închis, aproape negru (Tailwind gray-900) */
+  --foreground: #f9fafb; /* Un alb-gri (Tailwind gray-50) */
 }
 
 body {
@@ -24,15 +12,14 @@ body {
   font-family: Arial, Helvetica, sans-serif;
 }
 
-/* Ascunde săgețile de la input[type=number] pentru Chrome, Safari, Edge */
+/* Ascunde săgețile de la input[type=number] */
 input[type='number']::-webkit-outer-spin-button,
 input[type='number']::-webkit-inner-spin-button {
   -webkit-appearance: none;
   margin: 0;
 }
 
-/* Ascunde săgețile de la input[type=number] pentru Firefox */
 input[type='number'] {
   -moz-appearance: textfield;
-  appearance: textfield; /* MODIFICARE: Am adăugat proprietatea standard */
+  appearance: textfield;
 }

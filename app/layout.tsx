@@ -19,7 +19,7 @@ export default function RootLayout({
 }>) {
   return (
     <html lang="en">
-      <body className={inter.className}>
+      <body className={`${inter.className} bg-gray-100`}>
         <AuthProvider> {/* AuthProvider trebuie să fie la exterior */}
           <CartProvider> {/* CartProvider este în interiorul AuthProvider */}
             <Header /> {/* Header-ul va avea acces la ambele contexte */}
