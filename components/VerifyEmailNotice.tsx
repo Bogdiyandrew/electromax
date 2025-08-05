@@ -1,7 +1,7 @@
 'use client';
 
 import { useState } from 'react';
-import { getAuth, sendEmailVerification, User } from 'firebase/auth';
+import { getAuth, sendEmailVerification } from 'firebase/auth';
 
 const VerifyEmailNotice = () => {
   const [loading, setLoading] = useState(false);

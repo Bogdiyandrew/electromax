@@ -2,11 +2,35 @@ import { NextResponse } from 'next/server';
 import Stripe from 'stripe';
 import { adminDb as db } from '@/firebase/admin-config';
 
+// Tipuri
+interface CartItem {
+  id: string;
+  name: string;
+  price: number;
+  quantity: number;
+}
+
+interface ShippingInfo {
+  name: string;
+  email: string;
+  address: string;
+  city: string;
+  state: string;
+  zip: string;
+}
+
+interface OrderData {
+  userId: string | null;
+  shippingInfo: ShippingInfo;
+  cartItems: CartItem[];
+  total: number;
+}
+
 const stripe = new Stripe(process.env.STRIPE_SECRET_KEY!);
 
 export async function POST(request: Request) {
   try {
-    const body: { paymentIntentId?: string; orderData?: any } = await request.json();
+    const body: { paymentIntentId?: string; orderData?: OrderData } = await request.json();
     const { paymentIntentId, orderData } = body;
 
     if (!paymentIntentId) {

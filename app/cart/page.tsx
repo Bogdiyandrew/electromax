@@ -13,7 +13,7 @@ interface StockInfo {
 }
 
 const CartPage = () => {
-  const { cartItems, removeFromCart, updateItemQuantity, clearCart } = useCart();
+  const { cartItems, removeFromCart, updateItemQuantity } = useCart();
   const [isClient, setIsClient] = useState(false);
   
   const [stockInfo, setStockInfo] = useState<Record<string, StockInfo>>({});

@@ -5,9 +5,6 @@ import { useStripe, useElements, PaymentElement, Elements } from '@stripe/react-
 import { loadStripe, StripeElementsOptions } from '@stripe/stripe-js';
 import { useCart } from '@/context/CartContext';
 import { useAuth } from '@/app/context/AuthContext';
-import { db } from '@/firebase/config';
-import { collection, addDoc } from 'firebase/firestore';
-import { useRouter } from 'next/navigation';
 
 // Încarcă Stripe. Cheia publică ar trebui să fie într-un fișier .env.local
 const stripePromise = loadStripe(process.env.NEXT_PUBLIC_STRIPE_PUBLISHABLE_KEY!);
@@ -16,9 +13,8 @@ const stripePromise = loadStripe(process.env.NEXT_PUBLIC_STRIPE_PUBLISHABLE_KEY!
 const CheckoutForm = () => {
   const stripe = useStripe();
   const elements = useElements();
-  const { cartItems, clearCart } = useCart();
+  const { cartItems } = useCart(); // Am scos clearCart care nu era folosit
   const { user } = useAuth();
-  const router = useRouter();
 
   const [shippingInfo, setShippingInfo] = useState({
     name: '',
@@ -52,7 +48,6 @@ const CheckoutForm = () => {
       shippingInfo,
       cartItems,
       total: totalAmount,
-      createdAt: new Date().toISOString(),
     };
     localStorage.setItem('pendingOrder', JSON.stringify(pendingOrderData));
 
