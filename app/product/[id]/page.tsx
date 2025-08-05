@@ -36,22 +36,21 @@ async function getProduct(id: string): Promise<Product | null> {
   };
 }
 
-// 👇 FIXURI OBLIGATORII pentru Next.js să tacă
 export const dynamic = "force-dynamic";
 
 export async function generateStaticParams() {
   return [];
 }
 
-// 👇 Asta e cheia: fără destructurare în semnătură
-export default async function ProductPage(props: any) {
-  const params = await props.params;
+// ✅ FĂRĂ `any`, FĂRĂ destructurare în semnătură
+type ProductPageProps = {
+  params: {
+    id: string;
+  };
+};
 
-  const id = typeof params?.id === 'string' ? params.id : '';
-
-  if (!id) {
-    notFound();
-  }
+export default async function ProductPage(props: ProductPageProps) {
+  const { id } = props.params;
 
   const product = await getProduct(id);
 
