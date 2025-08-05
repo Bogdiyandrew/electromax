@@ -16,6 +16,7 @@ const OrderConfirmationContent = () => {
 
   useEffect(() => {
     const paymentIntentId = searchParams.get('payment_intent');
+    const pendingOrderDataString = localStorage.getItem('pendingOrder');
 
     if (!paymentIntentId) {
       setStatus('failed');
@@ -23,12 +24,20 @@ const OrderConfirmationContent = () => {
       return;
     }
 
+    if (!pendingOrderDataString) {
+        setStatus('failed');
+        setError('Datele comenzii nu au fost găsite. Vă rugăm contactați suportul.');
+        return;
+    }
+
+    const pendingOrderData = JSON.parse(pendingOrderDataString);
+
     const finalizeOrder = async () => {
       try {
         const response = await fetch('/api/finalize-order', {
           method: 'POST',
           headers: { 'Content-Type': 'application/json' },
-          body: JSON.stringify({ paymentIntentId }),
+          body: JSON.stringify({ paymentIntentId, orderData: pendingOrderData }),
         });
 
         const data = await response.json();
@@ -39,7 +48,24 @@ const OrderConfirmationContent = () => {
 
         setOrderId(data.orderId);
         setStatus('succeeded');
+        
+        // Curățăm coșul și datele temporare
         clearCart();
+        localStorage.removeItem('pendingOrder');
+
+        // Apelăm API-urile pentru email și stoc
+        fetch('/api/send-confirmation-email', {
+          method: 'POST',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify({ orderId: data.orderId }),
+        }).catch(err => console.error('Eroare la trimiterea email-ului de confirmare:', err));
+
+        fetch('/api/update-stock', {
+          method: 'POST',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify({ orderId: data.orderId }),
+        }).catch(err => console.error('Eroare la actualizarea stocului:', err));
+
       } catch (err: unknown) {
         console.error('Eroare la finalizarea comenzii:', err);
 
@@ -56,6 +82,8 @@ const OrderConfirmationContent = () => {
     finalizeOrder();
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, []);
+
+
 
   if (status === 'processing') {
     return <p className="text-center text-lg">Se finalizează comanda... Vă rugăm nu închideți fereastra.</p>;

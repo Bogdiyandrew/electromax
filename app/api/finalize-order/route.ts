@@ -2,35 +2,21 @@ import { NextResponse } from 'next/server';
 import Stripe from 'stripe';
 import { adminDb as db } from '@/firebase/admin-config';
 
-// Tipuri
-interface CartItem {
-  id: string;
-  name: string;
-  price: number;
-  quantity: number;
-}
-
-interface ShippingInfo {
-  name: string;
-  email: string;
-  address: string;
-  city: string;
-  state: string;
-  zip: string;
-}
-
 const stripe = new Stripe(process.env.STRIPE_SECRET_KEY!);
 
 export async function POST(request: Request) {
   try {
-    const body: { paymentIntentId?: string } = await request.json();
-    const paymentIntentId = body.paymentIntentId;
+    const body: { paymentIntentId?: string; orderData?: any } = await request.json();
+    const { paymentIntentId, orderData } = body;
 
     if (!paymentIntentId) {
       return NextResponse.json({ error: 'ID-ul plății este obligatoriu.' }, { status: 400 });
     }
+    if (!orderData) {
+        return NextResponse.json({ error: 'Datele comenzii sunt obligatorii.' }, { status: 400 });
+    }
 
-    // Verificăm dacă comanda a fost deja salvată
+    // Verificăm dacă comanda a fost deja salvată pentru a evita duplicatele
     const ordersRef = db.collection('orders');
     const existingOrders = await ordersRef
       .where('paymentIntentId', '==', paymentIntentId)
@@ -45,7 +31,7 @@ export async function POST(request: Request) {
       });
     }
 
-    // Preluăm detalii de plată de la Stripe
+    // Verificăm statusul plății la Stripe
     const paymentIntent = await stripe.paymentIntents.retrieve(paymentIntentId);
 
     if (paymentIntent.status !== 'succeeded') {
@@ -55,32 +41,25 @@ export async function POST(request: Request) {
       );
     }
 
-    const metadata = paymentIntent.metadata;
-    const cartItems: CartItem[] = JSON.parse(metadata.cartItems || '[]');
-    const shippingInfo: ShippingInfo = JSON.parse(metadata.shippingInfo || '{}');
-    const userId: string | null = metadata.userId ?? null; // ✅ evită undefined
-
-    const orderData = {
-      userId,
-      shippingInfo,
-      cartItems,
-      total: paymentIntent.amount / 100,
+    // Folosim datele trimise de client (din localStorage) pentru a crea comanda
+    const finalOrderData = {
+      userId: orderData.userId,
+      shippingInfo: orderData.shippingInfo,
+      cartItems: orderData.cartItems,
+      total: orderData.total,
       paymentIntentId: paymentIntent.id,
       paymentStatus: paymentIntent.status,
-      createdAt: new Date(paymentIntent.created * 1000),
+      status: 'În procesare', // Adăugăm un status inițial
+      createdAt: new Date(), // Folosim data serverului pentru consistență
     };
 
-    const newOrder = await db.collection('orders').add(orderData);
+    const newOrder = await db.collection('orders').add(finalOrderData);
     console.log('Comanda a fost salvată cu succes în Firestore cu ID-ul:', newOrder.id);
 
     return NextResponse.json({ success: true, orderId: newOrder.id });
   } catch (error: unknown) {
-    if (error instanceof Error) {
-      console.error('Eroare la finalizarea comenzii:', error.message);
-      return NextResponse.json({ error: error.message }, { status: 500 });
-    } else {
-      console.error('Eroare necunoscută la finalizarea comenzii.');
-      return NextResponse.json({ error: 'Eroare necunoscută.' }, { status: 500 });
-    }
+    const message = error instanceof Error ? error.message : 'Eroare necunoscută.';
+    console.error('Eroare la finalizarea comenzii:', message);
+    return NextResponse.json({ error: message }, { status: 500 });
   }
 }
