@@ -36,21 +36,21 @@ async function getProduct(id: string): Promise<Product | null> {
   };
 }
 
+// 👇 Obligatoriu pentru dynamic rendering
 export const dynamic = "force-dynamic";
 
+// 👇 Obligatoriu ca să nu dea eroare de "params must be awaited"
 export async function generateStaticParams() {
   return [];
 }
 
-// ✅ FĂRĂ `any`, FĂRĂ destructurare în semnătură
-type ProductPageProps = {
-  params: {
-    id: string;
-  };
-};
+// 👇 PageProps tip corect compatibil cu App Router
+interface PageProps {
+  params: Promise<{ id: string }>;
+}
 
-export default async function ProductPage(props: ProductPageProps) {
-  const { id } = props.params;
+export default async function ProductPage({ params }: PageProps) {
+  const { id } = await params;
 
   const product = await getProduct(id);
 
