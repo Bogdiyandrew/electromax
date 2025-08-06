@@ -51,8 +51,6 @@ async function SearchResults({ searchQuery }: { searchQuery: string }) {
   // Facem căutarea în Firestore
   if (searchQuery) {
     const productsRef = collection(db, "products");
-    // Creează un query mai avansat pentru a căuta string-uri parțiale
-    // Firestore nu suportă căutare "contains" nativ, deci căutăm un prefix
     const q = query(
       productsRef,
       where('name', '>=', searchQuery),
@@ -65,7 +63,6 @@ async function SearchResults({ searchQuery }: { searchQuery: string }) {
       products = querySnapshot.docs.map(doc => ({ id: doc.id, ...doc.data() } as Product));
     } catch (error) {
       console.error("Eroare la căutarea produselor:", error);
-      // Poți afișa un mesaj de eroare aici dacă dorești
     }
   }
 
@@ -94,12 +91,12 @@ async function SearchResults({ searchQuery }: { searchQuery: string }) {
 }
 
 // Componenta paginii care preia parametrii din URL
-export default function SearchPage({ searchParams }: { searchParams: { q: string } }) {
+// eslint-disable-next-line @typescript-eslint/no-explicit-any
+export default function SearchPage({ searchParams }: any) { // <-- AM MODIFICAT AICI
   const searchQuery = searchParams.q || '';
 
   return (
     <main className="min-h-screen bg-gray-900">
-      {/* Suspense este util pentru a afișa un mesaj de încărcare dacă fetch-ul durează */}
       <Suspense fallback={<p className="text-center text-white py-10">Se încarcă rezultatele...</p>}>
         <SearchResults searchQuery={searchQuery} />
       </Suspense>
