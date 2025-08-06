@@ -4,6 +4,9 @@ import Link from 'next/link';
 import Image from 'next/image';
 import { Suspense } from 'react';
 
+// Forțează pagina să fie mereu actualizată cu datele din baza de date
+export const dynamic = "force-dynamic";
+
 interface Product {
   id: string;
   name: string;
@@ -13,7 +16,6 @@ interface Product {
   imageUrl?: string;
 }
 
-// Reutilizăm componenta ProductCard
 const ProductCard = ({ product }: { product: Product }) => (
   <div className="bg-gray-800 rounded-xl border border-gray-700 hover:border-blue-500/50 transition-all duration-300 overflow-hidden group">
     <Link href={`/product/${product.id}`} className="block">
@@ -43,15 +45,18 @@ const ProductCard = ({ product }: { product: Product }) => (
   </div>
 );
 
-// Componenta care preia datele și afișează produsele
 async function CategoryProducts({ categoryName }: { categoryName: string }) {
   let products: Product[] = [];
-  const decodedCategoryName = decodeURIComponent(categoryName); // Decodăm numele categoriei din URL
+  const decodedCategoryName = decodeURIComponent(categoryName);
+  
+  // Convertim numele categoriei din URL în litere mici pentru căutare
+  const lowerCaseCategory = decodedCategoryName.toLowerCase();
 
   const productsRef = collection(db, "products");
+  // Modificăm interogarea să caute în câmpul `category_lowercase`
   const q = query(
     productsRef,
-    where('category', '==', decodedCategoryName),
+    where('category_lowercase', '==', lowerCaseCategory),
     orderBy('name')
   );
 
@@ -83,7 +88,6 @@ async function CategoryProducts({ categoryName }: { categoryName: string }) {
   );
 }
 
-// Componenta paginii care preia parametrii
 // eslint-disable-next-line @typescript-eslint/no-explicit-any
 export default function CategoryPage({ params }: any) {
   const { categoryName } = params;

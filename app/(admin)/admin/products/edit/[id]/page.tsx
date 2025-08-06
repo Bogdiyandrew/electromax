@@ -94,6 +94,7 @@ const EditProductPage = ({ params }: any) => {
         description: formState.description,
         stock: formState.isUnlimited ? Infinity : parseInt(formState.stock, 10),
         category: formState.category,
+        category_lowercase: formState.category.toLowerCase(),
         unit: formState.unit,
         isUnlimited: formState.isUnlimited,
         imageUrl: downloadURL,
