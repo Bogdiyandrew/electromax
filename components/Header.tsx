@@ -2,14 +2,14 @@
 
 import Link from 'next/link';
 import Image from 'next/image';
-import { Search, ShoppingCart, ChevronDown } from 'lucide-react'; // Am adăugat ChevronDown
+import { Search, ShoppingCart, ChevronDown } from 'lucide-react';
 import { useCart } from '@/context/CartContext';
 import { useAuth } from '@/app/context/AuthContext';
-import { auth, db } from '@/firebase/config'; // Am importat și db
+import { auth, db } from '@/firebase/config';
 import { signOut } from 'firebase/auth';
-import { useState, useEffect } from 'react';
+import { useState, useEffect, useRef } from 'react'; // Am adăugat useRef
 import { useRouter } from 'next/navigation';
-import { collection, getDocs } from 'firebase/firestore'; // Importuri noi pentru a citi categoriile
+import { collection, getDocs } from 'firebase/firestore';
 
 const Header = () => {
   const { cartItems } = useCart();
@@ -18,21 +18,33 @@ const Header = () => {
   const [searchQuery, setSearchQuery] = useState('');
   const router = useRouter();
 
-  // Stări noi pentru meniul de categorii
   const [categories, setCategories] = useState<string[]>([]);
   const [isCategoryMenuOpen, setIsCategoryMenuOpen] = useState(false);
+  const categoryMenuRef = useRef<HTMLDivElement>(null); // Ref pentru a detecta click-urile în afara meniului
 
-  // Efect pentru a prelua categoriile din Firestore
+  // Efect pentru a prelua categoriile
   useEffect(() => {
     const fetchCategories = async () => {
       const querySnapshot = await getDocs(collection(db, "products"));
       const fetchedCategories = querySnapshot.docs.map(doc => doc.data().category as string);
-      // Creăm o listă de categorii unice
       setCategories([...new Set(fetchedCategories)]);
     };
 
     fetchCategories();
     setIsClient(true);
+  }, []);
+
+  // Efect pentru a închide meniul la click în afara lui
+  useEffect(() => {
+    const handleClickOutside = (event: MouseEvent) => {
+      if (categoryMenuRef.current && !categoryMenuRef.current.contains(event.target as Node)) {
+        setIsCategoryMenuOpen(false);
+      }
+    };
+    document.addEventListener('mousedown', handleClickOutside);
+    return () => {
+      document.removeEventListener('mousedown', handleClickOutside);
+    };
   }, []);
 
   const totalItems = cartItems.reduce((sum, item) => sum + item.quantity, 0);
@@ -56,7 +68,6 @@ const Header = () => {
     <header className="bg-gray-800 shadow-md sticky top-0 z-50">
       <nav className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
         <div className="flex justify-between items-center h-16">
-          {/* Logo */}
           <div className="flex items-center space-x-4">
             <Link href="/" className="flex items-center space-x-2">
               <Image src="/logo.png" alt="ElectroMax Logo" width={40} height={40} />
@@ -65,18 +76,20 @@ const Header = () => {
               </span>
             </Link>
 
-            {/* Meniu Categorii (NOU) */}
-            <div className="relative" onMouseLeave={() => setIsCategoryMenuOpen(false)}>
+            {/* Meniu Categorii pe bază de CLICK */}
+            <div className="relative" ref={categoryMenuRef}>
               <button
-                onMouseEnter={() => setIsCategoryMenuOpen(true)}
+                onClick={() => setIsCategoryMenuOpen(!isCategoryMenuOpen)}
                 className="group inline-flex items-center px-3 py-2 rounded-md text-base font-medium text-gray-300 hover:text-white hover:bg-gray-700"
               >
                 <span>Categorii</span>
-                <ChevronDown className="ml-2 h-5 w-5 text-gray-400 group-hover:text-gray-300" />
+                <ChevronDown 
+                  className={`ml-2 h-5 w-5 text-gray-400 group-hover:text-gray-300 transition-transform duration-200 ${isCategoryMenuOpen ? 'rotate-180' : ''}`} 
+                />
               </button>
 
               {isCategoryMenuOpen && (
-                <div className="absolute left-0 mt-2 w-56 rounded-md shadow-lg bg-gray-700 ring-1 ring-black ring-opacity-5">
+                <div className="absolute left-0 mt-2 w-56 rounded-md shadow-lg bg-gray-700 ring-1 ring-black ring-opacity-5 z-10">
                   <div className="py-1" role="menu" aria-orientation="vertical">
                     {categories.map((category) => (
                       <Link
@@ -116,24 +129,18 @@ const Header = () => {
               </div>
             </div>
 
-            {/* Secțiunea dinamică: Auth + Coș */}
+            {/* Secțiunea Auth + Coș */}
             <div className="flex items-center space-x-4 ml-4">
-              {isAuthLoading ? (
-                <div className="h-5 w-40 bg-gray-700 rounded animate-pulse"></div>
-              ) : user ? (
+              {isAuthLoading ? ( <div className="h-5 w-40 bg-gray-700 rounded animate-pulse"></div>) : user ? (
                 <>
                   <span className="text-gray-300 hidden sm:block">Salut, {user.displayName || 'Client'}!</span>
                   <Link href="/account" className="text-gray-300 hover:text-white">Contul Meu</Link>
-                  <button onClick={handleLogout} className="text-gray-300 hover:text-white">
-                    Logout
-                  </button>
+                  <button onClick={handleLogout} className="text-gray-300 hover:text-white">Logout</button>
                 </>
               ) : (
                 <>
                   <Link href="/login" className="text-gray-300 hover:text-white">Login</Link>
-                  <Link href="/register" className="px-4 py-2 text-white bg-blue-600 rounded-md hover:bg-blue-700">
-                    Register
-                  </Link>
+                  <Link href="/register" className="px-4 py-2 text-white bg-blue-600 rounded-md hover:bg-blue-700">Register</Link>
                 </>
               )}
               
