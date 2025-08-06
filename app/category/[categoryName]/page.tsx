@@ -55,10 +55,10 @@ async function CategoryProducts({ categoryName }: { categoryName: string }) {
   const productsRef = collection(db, "products");
   // Modificăm interogarea să caute în câmpul `category_lowercase`
   const q = query(
-    productsRef,
-    where('category_lowercase', '==', lowerCaseCategory),
-    orderBy('name')
-  );
+  productsRef,
+  where('category_lowercase', '==', lowerCaseCategory)
+  // orderBy('name') // Comentat temporar pentru test
+);
 
   try {
     const querySnapshot = await getDocs(q);
