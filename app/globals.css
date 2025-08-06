@@ -1,15 +1,8 @@
 @import "tailwindcss";
 
-:root {
-  /* Schimbă background-ul să fie gradient ca în hero */
-  --background: linear-gradient(135deg, #111827 0%, #1f2937 50%, #1e3a8a 100%);
-  --foreground: #f9fafb;
-}
-
 body {
-  background: var(--background);
-  background-attachment: fixed; /* Important pentru gradient fix */
-  color: var(--foreground);
+  /* Am lăsat doar stilurile de bază, fără background sau culoare.
+     Acum, clasa 'bg-gray-100' din layout.tsx va seta fundalul. */
   font-family: Arial, Helvetica, sans-serif;
   margin: 0;
   padding: 0;

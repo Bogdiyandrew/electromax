@@ -19,11 +19,11 @@ export default function RootLayout({
 }>) {
   return (
     <html lang="en">
-      <body className={`${inter.className} bg-gray-100`}>
+      <body className={`${inter.className} bg-gray-900`}>
         <AuthProvider> {/* AuthProvider trebuie să fie la exterior */}
           <CartProvider> {/* CartProvider este în interiorul AuthProvider */}
             <Header /> {/* Header-ul va avea acces la ambele contexte */}
-            <main className="pt-16"> {/* Adăugăm un padding-top pentru a nu se suprapune cu header-ul fix */}
+            <main> {/* Adăugăm un padding-top pentru a nu se suprapune cu header-ul fix */}
               {children}
             </main>
           </CartProvider>
