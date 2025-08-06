@@ -51,11 +51,13 @@ async function SearchResults({ searchQuery }: { searchQuery: string }) {
   // Facem căutarea în Firestore
   if (searchQuery) {
     const productsRef = collection(db, "products");
+    const lowerCaseQuery = searchQuery.toLowerCase(); // Convertim căutarea la litere mici
+
     const q = query(
       productsRef,
-      where('name', '>=', searchQuery),
-      where('name', '<=', searchQuery + '\uf8ff'),
-      orderBy('name')
+      where('name_lowercase', '>=', lowerCaseQuery), // Căutăm în câmpul nou
+      where('name_lowercase', '<=', lowerCaseQuery + '\uf8ff'),
+      orderBy('name_lowercase') // Ordonăm după câmpul nou
     );
 
     try {

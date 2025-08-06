@@ -90,6 +90,7 @@ const EditProductPage = ({ params }: any) => {
       const updatedProduct = {
         name: formState.name,
         price: parseFloat(formState.price),
+        name_lowercase: formState.name.toLowerCase(),
         description: formState.description,
         stock: formState.isUnlimited ? Infinity : parseInt(formState.stock, 10),
         category: formState.category,

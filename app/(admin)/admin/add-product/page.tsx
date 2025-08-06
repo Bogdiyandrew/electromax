@@ -55,6 +55,7 @@ const AddProductPage = () => {
 
       const newProduct = {
         name: formState.name,
+        name_lowercase: formState.name.toLowerCase(),
         price: parseFloat(formState.price),
         description: formState.description,
         stock: formState.isUnlimited ? Infinity : parseInt(formState.stock, 10),
