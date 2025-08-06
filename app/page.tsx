@@ -3,6 +3,8 @@ import { db } from '@/firebase/config';
 import Link from 'next/link';
 import Image from 'next/image';
 
+export const dynamic = "force-dynamic"; // <-- ADAUGĂ LINIA ASTA AICI
+
 interface Product {
   id: string;
   name: string;
