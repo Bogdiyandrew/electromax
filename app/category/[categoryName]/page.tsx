@@ -56,8 +56,8 @@ async function CategoryProducts({ categoryName }: { categoryName: string }) {
   // Modificăm interogarea să caute în câmpul `category_lowercase`
   const q = query(
   productsRef,
-  where('category_lowercase', '==', lowerCaseCategory)
-  // orderBy('name') // Comentat temporar pentru test
+  where('category_lowercase', '==', lowerCaseCategory),
+  orderBy('name') // Re-activat!
 );
 
   try {
